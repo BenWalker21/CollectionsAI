@@ -1,12 +1,16 @@
 # CollectionsAI connection setup
 
-The MVP app is already wired with buttons and callback routes for:
+The fastest MVP workflow is AR aging CSV upload. Users can try CollectionsAI
+without connecting QuickBooks or email.
+
+This guide is for the optional later workflow where the app connects directly to:
 
 - QuickBooks Online
 - Gmail
 - Outlook / Microsoft 365
 
-The app runs in demo mode until you create developer credentials and add them to `.env`.
+The direct connection buttons run in setup mode until you create developer
+credentials and add them to `.env`.
 
 ## What you need to do
 

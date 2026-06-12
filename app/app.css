@@ -41,6 +41,7 @@ a {
 }
 
 button,
+input,
 textarea {
   font: inherit;
 }
@@ -165,6 +166,7 @@ h2 {
 .secondary-action,
 .primary-action,
 .connect-button,
+.sample-button,
 .panel-header button,
 .draft-actions button {
   display: inline-flex;
@@ -185,10 +187,73 @@ h2 {
 
 .primary-action,
 .connect-button,
+.sample-button,
 .panel-header button,
 .draft-actions button:first-child {
   color: #ffffff;
   background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+}
+
+.upload-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr) auto;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(36, 87, 255, 0.22);
+  border-radius: 26px;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(36, 87, 255, 0.12), transparent 16rem),
+    rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.upload-panel p:not(.eyebrow) {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.drop-zone {
+  display: grid;
+  gap: 7px;
+  place-items: center;
+  min-height: 138px;
+  border: 2px dashed rgba(36, 87, 255, 0.34);
+  border-radius: 22px;
+  padding: 20px;
+  background: #f8fbff;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--blue);
+  background: #eef4ff;
+}
+
+.drop-zone.loaded {
+  border-color: var(--green);
+  background: #effbf6;
+}
+
+.drop-zone input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.drop-zone span {
+  font-weight: 900;
+}
+
+.drop-zone small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .draft-actions button:last-child {
@@ -440,7 +505,8 @@ h2 {
 
 @media (max-width: 1080px) {
   .app-shell,
-  .content-grid {
+  .content-grid,
+  .upload-panel {
     grid-template-columns: 1fr;
   }
 

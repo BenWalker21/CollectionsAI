@@ -14,6 +14,13 @@ const sendAllButton = document.querySelector("#sendAllButton");
 const setupAlert = document.querySelector("#setupAlert");
 const setupTitle = document.querySelector("#setupTitle");
 const setupMessage = document.querySelector("#setupMessage");
+const dropZone = document.querySelector("#dropZone");
+const agingFileInput = document.querySelector("#agingFileInput");
+const sampleUploadButton = document.querySelector("#sampleUploadButton");
+const queuedMetric = document.querySelector("#queuedMetric");
+const expectedMetric = document.querySelector("#expectedMetric");
+const followupMetric = document.querySelector("#followupMetric");
+const riskMetric = document.querySelector("#riskMetric");
 
 let invoices = [];
 let selectedInvoice = null;
@@ -57,6 +64,7 @@ async function loadInvoices() {
   const data = await response.json();
   invoices = data.invoices;
   renderInvoices();
+  updateMetrics();
   selectInvoice(invoices[0].id);
 }
 
@@ -66,9 +74,9 @@ function renderInvoices() {
       (invoice) => `
         <button class="invoice-card" type="button" data-id="${invoice.id}">
           <div>
-            <strong>${invoice.customer} - ${currency.format(invoice.amount)}</strong>
-            <p>${invoice.id} - ${invoice.daysOverdue} days overdue - ${invoice.likelihood}</p>
-            <p>${invoice.reason}</p>
+            <strong>${escapeHtml(invoice.customer)} - ${currency.format(invoice.amount)}</strong>
+            <p>${escapeHtml(invoice.id)} - ${invoice.daysOverdue} days overdue - ${escapeHtml(invoice.likelihood)}</p>
+            <p>${escapeHtml(invoice.reason)}</p>
           </div>
           <span class="score-pill">${invoice.priorityScore} score</span>
         </button>
@@ -95,6 +103,18 @@ function selectInvoice(invoiceId) {
   draftTitle.textContent = `${selectedInvoice.customer} follow-up`;
   draftTone.textContent = selectedInvoice.tone;
   draftBody.value = createDraft(selectedInvoice);
+}
+
+function updateMetrics() {
+  const queued = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const expected = Math.round(queued * 0.6);
+  const atRisk = invoices.filter((invoice) => invoice.daysOverdue >= 45 || invoice.priorityScore >= 85).length;
+
+  queuedMetric.textContent = currency.format(queued);
+  expectedMetric.textContent = currency.format(expected);
+  followupMetric.textContent = invoices.length;
+  riskMetric.textContent = atRisk;
+  sendAllButton.textContent = `Queue ${invoices.length} emails`;
 }
 
 function createDraft(invoice) {
@@ -129,12 +149,264 @@ promiseButton.addEventListener("click", () => {
 });
 
 sendAllButton.addEventListener("click", () => {
-  sendAllButton.textContent = "37 emails queued";
+  sendAllButton.textContent = `${invoices.length} emails queued`;
   showSetupAlert(
     "Demo action queued",
     "Once Gmail or Outlook is connected, this action will create drafts or send approved follow-ups.",
   );
 });
+
+dropZone.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  dropZone.classList.add("drag-over");
+});
+
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("drag-over");
+});
+
+dropZone.addEventListener("drop", (event) => {
+  event.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const [file] = event.dataTransfer.files;
+  handleAgingFile(file);
+});
+
+agingFileInput.addEventListener("change", () => {
+  const [file] = agingFileInput.files;
+  handleAgingFile(file);
+});
+
+sampleUploadButton.addEventListener("click", () => {
+  const sampleCsv = [
+    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,1200,22400,0,0,0,23600",
+    "Beta Logistics,0,0,18000,0,0,18000",
+    "Delta Foods,0,0,0,0,12700,12700",
+    "Harbor Retail,4000,6700,0,0,0,10700",
+  ].join("\n");
+
+  loadAgingCsv(sampleCsv, "sample-aging.csv");
+});
+
+async function handleAgingFile(file) {
+  if (!file) {
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    showSetupAlert("CSV file needed", "Please upload an AR aging summary exported as a CSV file.");
+    return;
+  }
+
+  const text = await file.text();
+  loadAgingCsv(text, file.name);
+}
+
+function loadAgingCsv(csvText, fileName) {
+  try {
+    const parsedInvoices = parseAgingCsv(csvText);
+
+    if (parsedInvoices.length === 0) {
+      showSetupAlert(
+        "No overdue balances found",
+        "The file loaded, but I could not find overdue aging bucket balances to rank.",
+      );
+      return;
+    }
+
+    invoices = parsedInvoices;
+    selectedInvoice = null;
+    renderInvoices();
+    updateMetrics();
+    selectInvoice(invoices[0].id);
+
+    dropZone.classList.add("loaded");
+    dropZone.querySelector("span").textContent = `${fileName} loaded`;
+    dropZone.querySelector("small").textContent =
+      `${invoices.length} overdue customers ranked from the AR aging summary.`;
+    showSetupAlert(
+      "AR aging uploaded",
+      "The queue now uses your uploaded aging summary. No QuickBooks connection required for this MVP flow.",
+    );
+  } catch (error) {
+    showSetupAlert("Could not read CSV", error.message);
+  }
+}
+
+function parseAgingCsv(csvText) {
+  const rows = parseCsv(csvText).filter((row) => row.some((cell) => cell.trim()));
+
+  if (rows.length < 2) {
+    throw new Error("The CSV needs a header row and at least one customer row.");
+  }
+
+  const headers = rows[0].map(normalizeHeader);
+  const customerIndex = findHeader(headers, ["customer", "name", "client", "company"]);
+  const totalIndex = findHeader(headers, ["total", "balance", "openbalance", "amountdue"]);
+  const currentIndex = findHeader(headers, ["current"]);
+  const bucketIndexes = findAgingBuckets(headers);
+
+  if (customerIndex === -1) {
+    throw new Error("I could not find a customer/name column in the AR aging CSV.");
+  }
+
+  if (bucketIndexes.length === 0 && totalIndex === -1) {
+    throw new Error("I could not find aging buckets or a total balance column.");
+  }
+
+  return rows
+    .slice(1)
+    .map((row, index) => agingRowToInvoice(row, index, customerIndex, totalIndex, currentIndex, bucketIndexes))
+    .filter(Boolean)
+    .sort((a, b) => b.priorityScore - a.priorityScore || b.amount - a.amount);
+}
+
+function agingRowToInvoice(row, index, customerIndex, totalIndex, currentIndex, bucketIndexes) {
+  const customer = row[customerIndex]?.trim();
+
+  if (!customer || /total/i.test(customer)) {
+    return null;
+  }
+
+  const current = currentIndex === -1 ? 0 : parseMoney(row[currentIndex]);
+  const bucketValues = bucketIndexes.map((bucket) => ({
+    days: bucket.days,
+    amount: parseMoney(row[bucket.index]),
+  }));
+  const overdue = bucketValues.reduce((sum, bucket) => sum + bucket.amount, 0);
+  const total = totalIndex === -1 ? overdue + current : parseMoney(row[totalIndex]);
+  const amount = overdue > 0 ? overdue : Math.max(total - current, 0);
+
+  if (amount <= 0) {
+    return null;
+  }
+
+  const oldestBucket = bucketValues
+    .filter((bucket) => bucket.amount > 0)
+    .sort((a, b) => b.days - a.days)[0];
+  const daysOverdue = oldestBucket?.days || 15;
+  const priorityScore = scoreAgingRow(amount, daysOverdue);
+  const tone = toneForDays(daysOverdue);
+
+  return {
+    id: `AGE-${String(index + 1).padStart(3, "0")}`,
+    customer,
+    amount,
+    daysOverdue,
+    contact: "Accounts Payable",
+    likelihood: likelihoodForDays(daysOverdue),
+    channel: "Email",
+    priorityScore,
+    reason: `${currency.format(amount)} overdue from uploaded AR aging; oldest bucket is ${daysOverdue}+ days.`,
+    tone,
+    promise: "No current promise",
+  };
+}
+
+function parseCsv(csvText) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const next = csvText[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(cell);
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell);
+  rows.push(row);
+  return rows;
+}
+
+function findAgingBuckets(headers) {
+  return headers
+    .map((header, index) => {
+      if (/91|90plus|over90|olderthan90/.test(header)) {
+        return { index, days: 91 };
+      }
+      if (/61|60to90|6190/.test(header)) {
+        return { index, days: 61 };
+      }
+      if (/31|30to60|3160/.test(header)) {
+        return { index, days: 31 };
+      }
+      if (/1.*30|130|pastdue|overdue/.test(header) && header !== "current") {
+        return { index, days: 15 };
+      }
+      return null;
+    })
+    .filter(Boolean);
+}
+
+function findHeader(headers, candidates) {
+  return headers.findIndex((header) => candidates.some((candidate) => header.includes(candidate)));
+}
+
+function normalizeHeader(header) {
+  return header.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function parseMoney(value = "") {
+  const normalized = String(value).replace(/[$,\s]/g, "");
+
+  if (!normalized || normalized === "-") {
+    return 0;
+  }
+
+  if (normalized.startsWith("(") && normalized.endsWith(")")) {
+    return -Number(normalized.slice(1, -1)) || 0;
+  }
+
+  return Number(normalized) || 0;
+}
+
+function scoreAgingRow(amount, daysOverdue) {
+  const amountScore = Math.min(45, Math.round(amount / 1000));
+  const ageScore = Math.min(45, Math.round(daysOverdue / 2));
+  return Math.min(99, 35 + amountScore + ageScore);
+}
+
+function toneForDays(daysOverdue) {
+  if (daysOverdue >= 61) {
+    return "Escalated";
+  }
+  if (daysOverdue >= 31) {
+    return "Firm";
+  }
+  return "Friendly but direct";
+}
+
+function likelihoodForDays(daysOverdue) {
+  if (daysOverdue >= 61) {
+    return "Escalation recommended";
+  }
+  if (daysOverdue >= 31) {
+    return "Needs timing confirmation";
+  }
+  return "Likely to pay";
+}
 
 function showSetupMessageFromQuery() {
   const params = new URLSearchParams(window.location.search);
@@ -160,4 +432,13 @@ function showSetupAlert(title, message) {
   setupTitle.textContent = title;
   setupMessage.textContent = message;
   setupAlert.classList.remove("hidden");
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

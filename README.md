@@ -20,13 +20,16 @@ The MVP app is available at:
 
 It includes:
 
+- Drag-and-drop AR aging CSV upload
 - QuickBooks, Gmail, and Outlook connection entry points
-- Sample overdue invoice queue
+- Sample or uploaded overdue invoice queue
 - AI priority reasons
 - Draft follow-up emails
 - Promise tracking examples
 
-Connection routes are scaffolded in `server.mjs`. Real account connections require OAuth credentials in `.env`.
+The fastest MVP path is uploading an AR aging summary exported from QuickBooks,
+Xero, or an ERP. Connection routes are scaffolded in `server.mjs` for later.
+Real account connections require OAuth credentials in `.env`.
 
 ## Local preview
 
@@ -53,3 +56,4 @@ npm run check
 ## Setup guides
 
 See [docs/setup.md](docs/setup.md) for the QuickBooks, Gmail, and Outlook credential setup steps.
+See [docs/ar-aging-upload.md](docs/ar-aging-upload.md) for the upload-first MVP workflow.
