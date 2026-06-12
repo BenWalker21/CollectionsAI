@@ -18,6 +18,7 @@
           <a href="#upload">Upload AR</a>
           <a class="active" href="#queue">Queue</a>
           <a href="#recovered">Recovered</a>
+          <a href="#email">Email</a>
           <a href="#draft">Draft</a>
           <a href="#promises">Promises</a>
           <a href="#setup">Setup</a>
@@ -25,7 +26,7 @@
 
         <div class="sidebar-note">
           <strong>MVP mode</strong>
-          <p>Start by uploading an AR aging CSV. QuickBooks and email can connect later.</p>
+          <p>Start with AR aging plus email addresses. Gmail and Outlook can connect later.</p>
         </div>
       </aside>
 
@@ -33,7 +34,7 @@
         <header class="workspace-header">
           <div>
             <p class="eyebrow">Smart Collections Queue</p>
-            <h1>Upload AR aging and get today&apos;s outreach queue</h1>
+            <h1>Upload AR aging and get ready-to-send collection emails</h1>
           </div>
           <a class="secondary-action" href="/">View marketing site</a>
         </header>
@@ -43,15 +44,14 @@
             <p class="eyebrow">Fastest MVP path</p>
             <h2>Drag and drop an AR aging summary</h2>
             <p>
-              Export AR aging from QuickBooks, Xero, or your ERP as CSV.
-              CollectionsAI will rank customers by overdue amount and compare each
-              new upload to the last one to show what was paid.
+              Export AR aging from QuickBooks, Xero, or your ERP as CSV. Include
+              an Email column to generate customer-ready collection outreach.
             </p>
           </div>
           <label class="drop-zone" id="dropZone" for="agingFileInput">
             <input id="agingFileInput" type="file" accept=".csv,text/csv" />
             <span>Drop CSV here or click to choose file</span>
-            <small>Expected columns: Customer, Current, 1-30, 31-60, 61-90, 91+, Total</small>
+            <small>Expected columns: Customer, Email, Current, 1-30, 31-60, 61-90, 91+, Total</small>
           </label>
           <button class="sample-button" id="sampleUploadButton" type="button">
             Use first sample
@@ -112,7 +112,7 @@
           </article>
           <article>
             <span id="followupMetric">3</span>
-            <p>Follow-ups ready</p>
+            <p>Email drafts ready</p>
           </article>
           <article>
             <span id="riskMetric">2</span>
@@ -131,6 +131,30 @@
           <div class="recovery-list" id="recoveryList"></div>
         </section>
 
+        <section id="email" class="panel email-campaign-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Email outreach</p>
+              <h2>Turn the queue into approved follow-up emails</h2>
+            </div>
+            <button id="downloadCampaignButton" type="button">Download campaign CSV</button>
+          </div>
+          <div class="email-campaign-grid">
+            <article>
+              <span id="emailReadyMetric">0</span>
+              <p>customers have email addresses</p>
+            </article>
+            <article>
+              <span id="emailMissingMetric">0</span>
+              <p>customers need email addresses</p>
+            </article>
+            <article>
+              <span>Approve first</span>
+              <p>drafts are prepared for review before any send step</p>
+            </article>
+          </div>
+        </section>
+
         <div class="content-grid">
           <section id="queue" class="panel">
             <div class="panel-header">
@@ -138,7 +162,7 @@
                 <p class="eyebrow">AI ranked</p>
                 <h2>Overdue invoice queue</h2>
               </div>
-              <button id="sendAllButton" type="button">Queue emails</button>
+              <button id="sendAllButton" type="button">Prepare email drafts</button>
             </div>
             <div class="invoice-list" id="invoiceList"></div>
           </section>
@@ -157,6 +181,7 @@
             </div>
             <div class="draft-actions">
               <button id="copyDraftButton" type="button">Copy draft</button>
+              <button id="openEmailButton" type="button">Open email</button>
               <button id="promiseButton" type="button">Log promise</button>
             </div>
           </section>

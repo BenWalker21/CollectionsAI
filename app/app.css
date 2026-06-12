@@ -261,9 +261,14 @@ h2 {
   line-height: 1.4;
 }
 
-.draft-actions button:last-child {
+.draft-actions button:not(:first-child) {
   color: var(--ink);
   background: var(--surface-soft);
+}
+
+.draft-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .connection-grid {
@@ -368,6 +373,39 @@ h2 {
 }
 
 .metrics-row p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.email-campaign-panel {
+  margin-bottom: 16px;
+}
+
+.email-campaign-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.email-campaign-grid article {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  background: #ffffff;
+}
+
+.email-campaign-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--blue);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.email-campaign-grid p {
   margin: 0;
   color: var(--muted);
   font-weight: 700;
@@ -497,6 +535,12 @@ h2 {
   color: var(--muted);
 }
 
+.invoice-card .email-status {
+  margin-top: 7px;
+  color: var(--blue);
+  font-weight: 800;
+}
+
 .score-pill,
 .draft-tone,
 .promise-grid span {
@@ -601,7 +645,7 @@ h2 {
   }
 
   .sidebar-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -609,6 +653,7 @@ h2 {
   }
 
   .connection-grid,
+  .email-campaign-grid,
   .metrics-row,
   .recovery-list,
   .promise-grid {
@@ -629,6 +674,7 @@ h2 {
   }
 
   .connection-grid,
+  .email-campaign-grid,
   .metrics-row,
   .recovery-list,
   .promise-grid,

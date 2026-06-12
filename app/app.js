@@ -9,8 +9,10 @@ const draftTitle = document.querySelector("#draftTitle");
 const draftTone = document.querySelector("#draftTone");
 const draftBody = document.querySelector("#draftBody");
 const copyDraftButton = document.querySelector("#copyDraftButton");
+const openEmailButton = document.querySelector("#openEmailButton");
 const promiseButton = document.querySelector("#promiseButton");
 const sendAllButton = document.querySelector("#sendAllButton");
+const downloadCampaignButton = document.querySelector("#downloadCampaignButton");
 const setupAlert = document.querySelector("#setupAlert");
 const setupTitle = document.querySelector("#setupTitle");
 const setupMessage = document.querySelector("#setupMessage");
@@ -22,6 +24,8 @@ const queuedMetric = document.querySelector("#queuedMetric");
 const recoveredMetric = document.querySelector("#recoveredMetric");
 const followupMetric = document.querySelector("#followupMetric");
 const riskMetric = document.querySelector("#riskMetric");
+const emailReadyMetric = document.querySelector("#emailReadyMetric");
+const emailMissingMetric = document.querySelector("#emailMissingMetric");
 const recoveryPanel = document.querySelector("#recovered");
 const recoveryList = document.querySelector("#recoveryList");
 const comparisonStatus = document.querySelector("#comparisonStatus");
@@ -84,6 +88,7 @@ function renderInvoices() {
             <strong>${escapeHtml(invoice.customer)} - ${currency.format(invoice.amount)}</strong>
             <p>${escapeHtml(invoice.id)} - ${invoice.daysOverdue} days overdue - ${escapeHtml(invoice.likelihood)}</p>
             <p>${escapeHtml(invoice.reason)}</p>
+            <p class="email-status">${invoice.email ? `Ready for ${escapeHtml(invoice.email)}` : "Email address needed"}</p>
           </div>
           <span class="score-pill">${invoice.priorityScore} score</span>
         </button>
@@ -110,18 +115,35 @@ function selectInvoice(invoiceId) {
   draftTitle.textContent = `${selectedInvoice.customer} follow-up`;
   draftTone.textContent = selectedInvoice.tone;
   draftBody.value = createDraft(selectedInvoice);
+  openEmailButton.disabled = !selectedInvoice.email;
+  openEmailButton.textContent = selectedInvoice.email ? "Open email" : "Missing email";
 }
 
 function updateMetrics() {
   const queued = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
   const atRisk = invoices.filter((invoice) => invoice.daysOverdue >= 45 || invoice.priorityScore >= 85).length;
   const recovered = lastComparison?.recoveredTotal || 0;
+  const emailReady = invoices.filter((invoice) => invoice.email).length;
 
   queuedMetric.textContent = currency.format(queued);
   recoveredMetric.textContent = currency.format(recovered);
   followupMetric.textContent = invoices.length;
   riskMetric.textContent = atRisk;
-  sendAllButton.textContent = `Queue ${invoices.length} emails`;
+  emailReadyMetric.textContent = emailReady;
+  emailMissingMetric.textContent = invoices.length - emailReady;
+  sendAllButton.textContent = `Prepare ${invoices.length} email drafts`;
+}
+
+function createEmailSubject(invoice) {
+  if (invoice.tone === "Escalated") {
+    return `Action needed: overdue balance ${invoice.id}`;
+  }
+
+  if (invoice.tone === "Firm") {
+    return `Payment timing needed for ${invoice.id}`;
+  }
+
+  return `Quick reminder on ${invoice.id}`;
 }
 
 function createDraft(invoice) {
@@ -156,11 +178,53 @@ promiseButton.addEventListener("click", () => {
 });
 
 sendAllButton.addEventListener("click", () => {
-  sendAllButton.textContent = `${invoices.length} emails queued`;
+  sendAllButton.textContent = `${invoices.length} drafts prepared`;
   showSetupAlert(
-    "Demo action queued",
-    "Once Gmail or Outlook is connected, this action will create drafts or send approved follow-ups.",
+    "Email drafts prepared",
+    "Download the campaign CSV now, or connect Gmail/Outlook later to create drafts directly in the inbox.",
   );
+});
+
+openEmailButton.addEventListener("click", () => {
+  if (!selectedInvoice?.email) {
+    showSetupAlert(
+      "Email address needed",
+      "Add an Email column to the AR aging CSV so CollectionsAI can open this draft in your email client.",
+    );
+    return;
+  }
+
+  const mailto = new URL(`mailto:${selectedInvoice.email}`);
+  mailto.searchParams.set("subject", createEmailSubject(selectedInvoice));
+  mailto.searchParams.set("body", draftBody.value);
+  window.location.href = mailto.toString();
+});
+
+downloadCampaignButton.addEventListener("click", () => {
+  const rows = [
+    ["Customer", "Email", "Subject", "Body", "Amount", "Days Overdue", "Tone", "Priority Score"],
+    ...invoices.map((invoice) => [
+      invoice.customer,
+      invoice.email || "",
+      createEmailSubject(invoice),
+      createDraft(invoice),
+      invoice.amount,
+      invoice.daysOverdue,
+      invoice.tone,
+      invoice.priorityScore,
+    ]),
+  ];
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "collectionsai-email-campaign.csv";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 });
 
 dropZone.addEventListener("dragover", (event) => {
@@ -381,6 +445,7 @@ function saveAgingSnapshot(sourceInvoices, fileName) {
     uploadedAt: new Date().toISOString(),
     invoices: sourceInvoices.map((invoice) => ({
       customer: invoice.customer,
+      email: invoice.email,
       amount: invoice.amount,
       daysOverdue: invoice.daysOverdue,
     })),
@@ -398,6 +463,7 @@ function parseAgingCsv(csvText) {
 
   const headers = rows[0].map(normalizeHeader);
   const customerIndex = findHeader(headers, ["customer", "name", "client", "company"]);
+  const emailIndex = findHeader(headers, ["email", "emailaddress", "contactemail", "apemail", "billingemail"]);
   const totalIndex = findHeader(headers, ["total", "balance", "openbalance", "amountdue"]);
   const currentIndex = findHeader(headers, ["current"]);
   const bucketIndexes = findAgingBuckets(headers);
@@ -412,12 +478,14 @@ function parseAgingCsv(csvText) {
 
   return rows
     .slice(1)
-    .map((row, index) => agingRowToInvoice(row, index, customerIndex, totalIndex, currentIndex, bucketIndexes))
+    .map((row, index) =>
+      agingRowToInvoice(row, index, customerIndex, emailIndex, totalIndex, currentIndex, bucketIndexes),
+    )
     .filter(Boolean)
     .sort((a, b) => b.priorityScore - a.priorityScore || b.amount - a.amount);
 }
 
-function agingRowToInvoice(row, index, customerIndex, totalIndex, currentIndex, bucketIndexes) {
+function agingRowToInvoice(row, index, customerIndex, emailIndex, totalIndex, currentIndex, bucketIndexes) {
   const customer = row[customerIndex]?.trim();
 
   if (!customer || /total/i.test(customer)) {
@@ -447,6 +515,7 @@ function agingRowToInvoice(row, index, customerIndex, totalIndex, currentIndex, 
   return {
     id: `AGE-${String(index + 1).padStart(3, "0")}`,
     customer,
+    email: emailIndex === -1 ? "" : row[emailIndex]?.trim(),
     amount,
     daysOverdue,
     contact: "Accounts Payable",
@@ -565,21 +634,21 @@ function likelihoodForDays(daysOverdue) {
 
 function firstSampleAgingCsv() {
   return [
-    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
-    "Acme Supply,1200,22400,0,0,0,23600",
-    "Beta Logistics,0,0,18000,0,0,18000",
-    "Delta Foods,0,0,0,0,12700,12700",
-    "Harbor Retail,4000,6700,0,0,0,10700",
+    "Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,ap@acmesupply.example,1200,22400,0,0,0,23600",
+    "Beta Logistics,finance@betalogistics.example,0,0,18000,0,0,18000",
+    "Delta Foods,ap@deltafoods.example,0,0,0,0,12700,12700",
+    "Harbor Retail,accounting@harborretail.example,4000,6700,0,0,0,10700",
   ].join("\n");
 }
 
 function nextSampleAgingCsv() {
   return [
-    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
-    "Acme Supply,1200,0,0,0,0,1200",
-    "Beta Logistics,0,0,9000,0,0,9000",
-    "Delta Foods,0,0,0,0,12700,12700",
-    "Newport Services,0,5600,0,0,0,5600",
+    "Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,ap@acmesupply.example,1200,0,0,0,0,1200",
+    "Beta Logistics,finance@betalogistics.example,0,0,9000,0,0,9000",
+    "Delta Foods,ap@deltafoods.example,0,0,0,0,12700,12700",
+    "Newport Services,billing@newportservices.example,0,5600,0,0,0,5600",
   ].join("\n");
 }
 
@@ -620,4 +689,9 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeCsvCell(value) {
+  const stringValue = String(value ?? "");
+  return `"${stringValue.replaceAll('"', '""')}"`;
 }

@@ -332,6 +332,7 @@ function demoInvoices() {
       {
         id: "INV-1042",
         customer: "Acme Supply",
+        email: "ap@acmesupply.example",
         amount: 22400,
         daysOverdue: 18,
         contact: "Jordan Lee",
@@ -345,6 +346,7 @@ function demoInvoices() {
       {
         id: "INV-1088",
         customer: "Beta Logistics",
+        email: "finance@betalogistics.example",
         amount: 18000,
         daysOverdue: 31,
         contact: "Morgan Patel",
@@ -358,6 +360,7 @@ function demoInvoices() {
       {
         id: "INV-1104",
         customer: "Delta Foods",
+        email: "ap@deltafoods.example",
         amount: 12700,
         daysOverdue: 45,
         contact: "Riley Chen",

@@ -8,7 +8,7 @@ Users can start without connecting QuickBooks.
 2. Open the CollectionsAI app.
 3. Drag the CSV onto the upload box.
 4. Review the ranked collections queue.
-5. Copy or approve the suggested follow-up drafts.
+5. Copy, open, or export the suggested follow-up email drafts.
 6. Upload the next AR aging summary later to see what changed.
 
 ## Repeated uploads
@@ -31,14 +31,27 @@ The parser looks for a customer/name column plus either aging buckets or a balan
 Recommended columns:
 
 ```text
-Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total
+Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total
 ```
 
 Also supported:
 
 - `Name`, `Client`, or `Company` instead of `Customer`
+- `Email`, `Email Address`, `Contact Email`, `AP Email`, or `Billing Email`
 - `Balance`, `Open Balance`, or `Amount Due` instead of `Total`
 - Common aging bucket variants such as `1-30`, `31-60`, `61-90`, and `90+`
+
+## Email workflow
+
+If the CSV includes email addresses, CollectionsAI can immediately:
+
+- Generate one follow-up draft per overdue customer
+- Open the selected draft in the user's email client
+- Export all drafts as `collectionsai-email-campaign.csv`
+
+The campaign CSV contains customer, email, subject, body, amount, days overdue,
+tone, and priority score. This is useful for Gmail, Outlook, or mail merge tools
+before direct inbox sending is connected.
 
 ## Why this is the best first step
 
@@ -46,7 +59,7 @@ AR aging upload avoids the friction of OAuth setup and app review while still pr
 
 - Identify overdue balances
 - Rank the highest-impact customers
-- Draft follow-up emails
+- Draft ready-to-send follow-up emails
 - Show expected cash recovery
 
 QuickBooks, Gmail, and Outlook connections can be added after users validate the workflow.

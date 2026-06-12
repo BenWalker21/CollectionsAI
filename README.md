@@ -25,12 +25,14 @@ It includes:
 - QuickBooks, Gmail, and Outlook connection entry points
 - Sample or uploaded overdue invoice queue
 - AI priority reasons
-- Draft follow-up emails
+- Ready-to-send follow-up email drafts
+- Campaign CSV export for email outreach
 - Promise tracking examples
 
 The fastest MVP path is uploading an AR aging summary exported from QuickBooks,
-Xero, or an ERP. Connection routes are scaffolded in `server.mjs` for later.
-Real account connections require OAuth credentials in `.env`.
+Xero, or an ERP with customer email addresses. Users can export approved email
+drafts immediately. Connection routes are scaffolded in `server.mjs` for later.
+Real Gmail/Outlook sending requires OAuth credentials in `.env`.
 
 ## Local preview
 
