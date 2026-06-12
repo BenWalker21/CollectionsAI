@@ -194,9 +194,14 @@ h2 {
   background: linear-gradient(135deg, var(--blue), var(--blue-dark));
 }
 
+.sample-button.secondary-sample {
+  color: var(--blue);
+  background: var(--surface-soft);
+}
+
 .upload-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr) auto;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr) auto auto;
   align-items: center;
   gap: 18px;
   margin-bottom: 18px;
@@ -368,6 +373,86 @@ h2 {
   font-weight: 700;
 }
 
+.recovery-panel {
+  margin-bottom: 16px;
+}
+
+.recovery-panel.hidden {
+  display: none;
+}
+
+.recovery-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.recovery-group {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: #ffffff;
+}
+
+.recovery-group > div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.recovery-group > div span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.recovery-group > div strong {
+  font-size: 1.2rem;
+  letter-spacing: -0.04em;
+}
+
+.recovery-group.paid {
+  border-color: rgba(18, 163, 113, 0.3);
+  background: #f0fbf6;
+}
+
+.recovery-group.reduced {
+  border-color: rgba(36, 87, 255, 0.24);
+  background: #f5f8ff;
+}
+
+.recovery-group.increased {
+  border-color: rgba(216, 137, 22, 0.3);
+  background: #fff8eb;
+}
+
+.recovery-group.new {
+  border-color: rgba(100, 116, 139, 0.24);
+}
+
+.recovery-group ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recovery-group li {
+  display: grid;
+  gap: 2px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.recovery-group small {
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
@@ -516,7 +601,7 @@ h2 {
   }
 
   .sidebar-nav {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .sidebar-note {
@@ -525,6 +610,7 @@ h2 {
 
   .connection-grid,
   .metrics-row,
+  .recovery-list,
   .promise-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -544,6 +630,7 @@ h2 {
 
   .connection-grid,
   .metrics-row,
+  .recovery-list,
   .promise-grid,
   .sidebar-nav {
     grid-template-columns: 1fr;

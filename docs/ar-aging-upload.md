@@ -9,6 +9,20 @@ Users can start without connecting QuickBooks.
 3. Drag the CSV onto the upload box.
 4. Review the ranked collections queue.
 5. Copy or approve the suggested follow-up drafts.
+6. Upload the next AR aging summary later to see what changed.
+
+## Repeated uploads
+
+Each upload is saved in the user's browser as the latest baseline.
+
+When the user uploads a newer AR aging summary, CollectionsAI compares it to the previous upload and shows:
+
+- Paid in full: customer had an overdue balance before and no longer appears overdue
+- Partially paid: overdue balance decreased
+- Balance increased: overdue balance went up
+- New overdue balance: customer appears overdue for the first time
+
+This lets users prove collections progress without a full QuickBooks connection.
 
 ## Supported CSV columns
 

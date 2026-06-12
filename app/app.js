@@ -17,13 +17,20 @@ const setupMessage = document.querySelector("#setupMessage");
 const dropZone = document.querySelector("#dropZone");
 const agingFileInput = document.querySelector("#agingFileInput");
 const sampleUploadButton = document.querySelector("#sampleUploadButton");
+const sampleFollowupButton = document.querySelector("#sampleFollowupButton");
 const queuedMetric = document.querySelector("#queuedMetric");
-const expectedMetric = document.querySelector("#expectedMetric");
+const recoveredMetric = document.querySelector("#recoveredMetric");
 const followupMetric = document.querySelector("#followupMetric");
 const riskMetric = document.querySelector("#riskMetric");
+const recoveryPanel = document.querySelector("#recovered");
+const recoveryList = document.querySelector("#recoveryList");
+const comparisonStatus = document.querySelector("#comparisonStatus");
+
+const agingSnapshotKey = "collectionsai:last-aging-snapshot";
 
 let invoices = [];
 let selectedInvoice = null;
+let lastComparison = null;
 
 initialize();
 
@@ -107,11 +114,11 @@ function selectInvoice(invoiceId) {
 
 function updateMetrics() {
   const queued = invoices.reduce((sum, invoice) => sum + invoice.amount, 0);
-  const expected = Math.round(queued * 0.6);
   const atRisk = invoices.filter((invoice) => invoice.daysOverdue >= 45 || invoice.priorityScore >= 85).length;
+  const recovered = lastComparison?.recoveredTotal || 0;
 
   queuedMetric.textContent = currency.format(queued);
-  expectedMetric.textContent = currency.format(expected);
+  recoveredMetric.textContent = currency.format(recovered);
   followupMetric.textContent = invoices.length;
   riskMetric.textContent = atRisk;
   sendAllButton.textContent = `Queue ${invoices.length} emails`;
@@ -178,15 +185,15 @@ agingFileInput.addEventListener("change", () => {
 });
 
 sampleUploadButton.addEventListener("click", () => {
-  const sampleCsv = [
-    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
-    "Acme Supply,1200,22400,0,0,0,23600",
-    "Beta Logistics,0,0,18000,0,0,18000",
-    "Delta Foods,0,0,0,0,12700,12700",
-    "Harbor Retail,4000,6700,0,0,0,10700",
-  ].join("\n");
+  loadAgingCsv(firstSampleAgingCsv(), "sample-aging-week-1.csv");
+});
 
-  loadAgingCsv(sampleCsv, "sample-aging.csv");
+sampleFollowupButton.addEventListener("click", () => {
+  if (!readSavedSnapshot()) {
+    saveAgingSnapshot(parseAgingCsv(firstSampleAgingCsv()), "sample-aging-week-1.csv");
+  }
+
+  loadAgingCsv(nextSampleAgingCsv(), "sample-aging-week-2.csv");
 });
 
 async function handleAgingFile(file) {
@@ -206,6 +213,7 @@ async function handleAgingFile(file) {
 function loadAgingCsv(csvText, fileName) {
   try {
     const parsedInvoices = parseAgingCsv(csvText);
+    const previousSnapshot = readSavedSnapshot();
 
     if (parsedInvoices.length === 0) {
       showSetupAlert(
@@ -215,23 +223,170 @@ function loadAgingCsv(csvText, fileName) {
       return;
     }
 
+    lastComparison = previousSnapshot
+      ? compareAgingSnapshots(previousSnapshot.invoices, parsedInvoices)
+      : null;
     invoices = parsedInvoices;
     selectedInvoice = null;
     renderInvoices();
+    renderComparison(previousSnapshot, fileName);
     updateMetrics();
     selectInvoice(invoices[0].id);
+    saveAgingSnapshot(parsedInvoices, fileName);
 
     dropZone.classList.add("loaded");
     dropZone.querySelector("span").textContent = `${fileName} loaded`;
     dropZone.querySelector("small").textContent =
-      `${invoices.length} overdue customers ranked from the AR aging summary.`;
+      previousSnapshot
+        ? `${invoices.length} overdue customers ranked and compared with the last upload.`
+        : `${invoices.length} overdue customers ranked. Upload the next summary to see payments.`;
     showSetupAlert(
-      "AR aging uploaded",
-      "The queue now uses your uploaded aging summary. No QuickBooks connection required for this MVP flow.",
+      previousSnapshot ? "AR aging compared" : "AR aging baseline saved",
+      previousSnapshot
+        ? "The queue now shows current open balances and the recovered section shows what changed since the last upload."
+        : "This upload is saved as the baseline. Upload the next AR aging summary to see what was paid or reduced.",
     );
   } catch (error) {
     showSetupAlert("Could not read CSV", error.message);
   }
+}
+
+function renderComparison(previousSnapshot, fileName) {
+  if (!previousSnapshot || !lastComparison) {
+    recoveryPanel.classList.add("hidden");
+    recoveryList.innerHTML = "";
+    comparisonStatus.textContent = "Upload another summary";
+    return;
+  }
+
+  recoveryPanel.classList.remove("hidden");
+  comparisonStatus.textContent = `${fileName} vs ${previousSnapshot.fileName}`;
+
+  const groups = [
+    ["paid", "Paid in full"],
+    ["reduced", "Partially paid"],
+    ["increased", "Balance increased"],
+    ["new", "New overdue balance"],
+  ];
+
+  recoveryList.innerHTML = groups
+    .map(([key, label]) => {
+      const items = lastComparison[key];
+      const total = items.reduce((sum, item) => sum + Math.abs(item.change), 0);
+
+      return `
+        <article class="recovery-group ${key}">
+          <div>
+            <span>${escapeHtml(label)}</span>
+            <strong>${currency.format(total)}</strong>
+          </div>
+          <ul>
+            ${
+              items.length === 0
+                ? "<li>No customers in this category</li>"
+                : items
+                    .map(
+                      (item) => `
+                        <li>
+                          <span>${escapeHtml(item.customer)}</span>
+                          <small>${currency.format(item.previousAmount)} -> ${currency.format(item.currentAmount)}</small>
+                        </li>
+                      `,
+                    )
+                    .join("")
+            }
+          </ul>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function compareAgingSnapshots(previousInvoices, currentInvoices) {
+  const previousMap = mapInvoicesByCustomer(previousInvoices);
+  const currentMap = mapInvoicesByCustomer(currentInvoices);
+  const comparison = {
+    paid: [],
+    reduced: [],
+    increased: [],
+    new: [],
+    unchanged: [],
+    recoveredTotal: 0,
+  };
+
+  previousMap.forEach((previous, key) => {
+    const current = currentMap.get(key);
+    const currentAmount = current?.amount || 0;
+    const change = currentAmount - previous.amount;
+    const item = {
+      customer: current?.customer || previous.customer,
+      previousAmount: previous.amount,
+      currentAmount,
+      change,
+    };
+
+    if (!current || currentAmount === 0) {
+      comparison.paid.push(item);
+      comparison.recoveredTotal += previous.amount;
+    } else if (currentAmount < previous.amount) {
+      comparison.reduced.push(item);
+      comparison.recoveredTotal += previous.amount - currentAmount;
+    } else if (currentAmount > previous.amount) {
+      comparison.increased.push(item);
+    } else {
+      comparison.unchanged.push(item);
+    }
+  });
+
+  currentMap.forEach((current, key) => {
+    if (!previousMap.has(key)) {
+      comparison.new.push({
+        customer: current.customer,
+        previousAmount: 0,
+        currentAmount: current.amount,
+        change: current.amount,
+      });
+    }
+  });
+
+  ["paid", "reduced", "increased", "new"].forEach((key) => {
+    comparison[key].sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
+  });
+
+  return comparison;
+}
+
+function mapInvoicesByCustomer(sourceInvoices) {
+  const map = new Map();
+
+  sourceInvoices.forEach((invoice) => {
+    map.set(customerKey(invoice.customer), invoice);
+  });
+
+  return map;
+}
+
+function readSavedSnapshot() {
+  try {
+    const snapshot = localStorage.getItem(agingSnapshotKey);
+    return snapshot ? JSON.parse(snapshot) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveAgingSnapshot(sourceInvoices, fileName) {
+  const snapshot = {
+    fileName,
+    uploadedAt: new Date().toISOString(),
+    invoices: sourceInvoices.map((invoice) => ({
+      customer: invoice.customer,
+      amount: invoice.amount,
+      daysOverdue: invoice.daysOverdue,
+    })),
+  };
+
+  localStorage.setItem(agingSnapshotKey, JSON.stringify(snapshot));
 }
 
 function parseAgingCsv(csvText) {
@@ -406,6 +561,30 @@ function likelihoodForDays(daysOverdue) {
     return "Needs timing confirmation";
   }
   return "Likely to pay";
+}
+
+function firstSampleAgingCsv() {
+  return [
+    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,1200,22400,0,0,0,23600",
+    "Beta Logistics,0,0,18000,0,0,18000",
+    "Delta Foods,0,0,0,0,12700,12700",
+    "Harbor Retail,4000,6700,0,0,0,10700",
+  ].join("\n");
+}
+
+function nextSampleAgingCsv() {
+  return [
+    "Customer,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,1200,0,0,0,0,1200",
+    "Beta Logistics,0,0,9000,0,0,9000",
+    "Delta Foods,0,0,0,0,12700,12700",
+    "Newport Services,0,5600,0,0,0,5600",
+  ].join("\n");
+}
+
+function customerKey(customer) {
+  return customer.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function showSetupMessageFromQuery() {

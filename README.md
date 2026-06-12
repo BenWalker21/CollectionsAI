@@ -21,6 +21,7 @@ The MVP app is available at:
 It includes:
 
 - Drag-and-drop AR aging CSV upload
+- Comparison against the previous upload to show paid/reduced balances
 - QuickBooks, Gmail, and Outlook connection entry points
 - Sample or uploaded overdue invoice queue
 - AI priority reasons
