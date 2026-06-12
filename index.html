@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CollectionsAI is an AI collections copilot that prioritizes overdue invoices, drafts personalized follow-ups, tracks promises, and helps recover cash faster."
+    />
+    <title>CollectionsAI | AI Collections Copilot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="#top" aria-label="CollectionsAI home">
+          <span class="brand-mark">CA</span>
+          <span>CollectionsAI</span>
+        </a>
+        <div class="nav-links">
+          <a href="#copilot">Copilot</a>
+          <a href="#queue">Queue</a>
+          <a href="#analytics">Analytics</a>
+          <a href="#demo">Demo</a>
+        </div>
+        <a class="nav-cta" href="mailto:hello@collectionsai.com">Request demo</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-copy">
+          <p class="eyebrow">AI Collections Copilot for modern finance teams</p>
+          <h1>Turn overdue invoices into recovered cash.</h1>
+          <p class="hero-subtitle">
+            Connect QuickBooks Online, Xero, Stripe, ERP data, Gmail, or Outlook.
+            CollectionsAI identifies overdue invoices, prioritizes the right accounts,
+            drafts personalized follow-ups, and tracks every promise to pay.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="mailto:hello@collectionsai.com">Join the waitlist</a>
+            <a class="button secondary" href="#demo">See how it works</a>
+          </div>
+          <div class="integration-row" aria-label="Supported integrations">
+            <span>QBO</span>
+            <span>Xero</span>
+            <span>Stripe</span>
+            <span>ERP</span>
+            <span>Gmail</span>
+            <span>Outlook</span>
+          </div>
+        </div>
+
+        <div class="dashboard-card hero-dashboard" aria-label="Collections dashboard preview">
+          <div class="card-header">
+            <div>
+              <p class="muted-label">Today&apos;s queue</p>
+              <h2>$81,900 prioritized</h2>
+            </div>
+            <span class="status-pill">AI ranked</span>
+          </div>
+
+          <div class="queue-list">
+            <article class="queue-item high">
+              <div>
+                <strong>Acme Supply</strong>
+                <p>$22,400 - likely to pay</p>
+              </div>
+              <span>Send email</span>
+            </article>
+            <article class="queue-item">
+              <div>
+                <strong>Beta Logistics</strong>
+                <p>$18,000 - overdue 31 days</p>
+              </div>
+              <span>Firm tone</span>
+            </article>
+            <article class="queue-item call">
+              <div>
+                <strong>Delta Foods</strong>
+                <p>$12,700 - call recommended</p>
+              </div>
+              <span>Call</span>
+            </article>
+          </div>
+
+          <div class="one-click">
+            <button id="sendBatchButton" type="button">Send 37 follow-ups</button>
+            <p id="sendBatchStatus" aria-live="polite">Estimated cash impact: $48,200</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-bar section-shell" aria-label="Collections metrics">
+        <article>
+          <span>$428K</span>
+          <p>Outstanding AR surfaced</p>
+        </article>
+        <article>
+          <span>34%</span>
+          <p>Faster average collection cycle</p>
+        </article>
+        <article>
+          <span>$96K</span>
+          <p>Expected collections this week</p>
+        </article>
+        <article>
+          <span>92%</span>
+          <p>Promise follow-up completion</p>
+        </article>
+      </section>
+
+      <section id="copilot" class="section-shell split-section">
+        <div>
+          <p class="eyebrow">AI Collections Copilot</p>
+          <h2>Know who to contact, what to say, and when to escalate.</h2>
+          <p>
+            CollectionsAI monitors invoices and customer communication history,
+            then turns the messy collections workflow into a guided daily plan.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-number">01</span>
+            <h3>Identify overdue invoices</h3>
+            <p>Sync AR data from accounting systems and spot aging balances automatically.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">02</span>
+            <h3>Prioritize by impact</h3>
+            <p>Rank outreach by amount owed, days overdue, customer behavior, and pay likelihood.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">03</span>
+            <h3>Draft smart follow-ups</h3>
+            <p>Generate emails that match the customer relationship, payment history, and context.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">04</span>
+            <h3>Escalate over time</h3>
+            <p>Move from friendly reminders to direct payment timing and structured plans.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="queue" class="section-shell workflow-section">
+        <div class="section-heading centered">
+          <p class="eyebrow">Smart Collections Queue</p>
+          <h2>Every morning starts with the highest-impact outreach.</h2>
+          <p>
+            Stop scanning spreadsheets. CollectionsAI gives the team a ranked action list
+            with suggested channels, tone, and expected recovery impact.
+          </p>
+        </div>
+
+        <div class="workflow-grid">
+          <article class="workflow-card">
+            <span>Day 7</span>
+            <h3>Friendly reminder</h3>
+            <p>Warm, helpful language with invoice details and a simple payment link.</p>
+          </article>
+          <article class="workflow-card active">
+            <span>Day 21</span>
+            <h3>Confirm payment timing</h3>
+            <p>Ask for a concrete payment date and clarify whether anything is blocking payment.</p>
+          </article>
+          <article class="workflow-card">
+            <span>Day 45</span>
+            <h3>Escalation and plan</h3>
+            <p>Firm escalation with payment plan options and a clear next step.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-shell personalization-section">
+        <div class="email-panel">
+          <div class="email-tabs" role="tablist" aria-label="Email personalization examples">
+            <button class="email-tab active" type="button" data-tone="friendly">Friendly</button>
+            <button class="email-tab" type="button" data-tone="late">Late payer</button>
+            <button class="email-tab" type="button" data-tone="executive">Executive</button>
+          </div>
+          <div class="email-preview">
+            <p class="muted-label">AI draft</p>
+            <h3 id="emailSubject">Quick reminder on invoice INV-1042</h3>
+            <p id="emailBody">
+              Hi Jordan, hope you&apos;re doing well. I wanted to send a quick reminder
+              that invoice INV-1042 is now due. You can pay using the secure link below,
+              or reply here if you need anything from our team.
+            </p>
+            <a href="mailto:hello@collectionsai.com">Review and send</a>
+          </div>
+        </div>
+
+        <div>
+          <p class="eyebrow">AI Email Personalization</p>
+          <h2>No more generic collection templates.</h2>
+          <p>
+            The copilot reads the invoice, customer history, and prior replies before drafting.
+            Friendly customers get softer language, chronic late payers get firmer follow-up,
+            and executives get concise context.
+          </p>
+        </div>
+      </section>
+
+      <section class="section-shell promise-section">
+        <div>
+          <p class="eyebrow">Auto Promise Tracking</p>
+          <h2>When someone says &quot;paying Friday,&quot; the promise does not disappear.</h2>
+          <p>
+            CollectionsAI logs commitments from replies, adds the next action,
+            follows up automatically, and alerts the team when a promise is missed.
+          </p>
+        </div>
+        <div class="promise-card">
+          <div class="message-bubble">Paying Friday. Thanks for the reminder.</div>
+          <ul class="promise-list">
+            <li>
+              <span></span>
+              Promise logged for Friday
+            </li>
+            <li>
+              <span></span>
+              Follow-up scheduled if unpaid
+            </li>
+            <li>
+              <span></span>
+              Missed commitment alert prepared
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="analytics" class="section-shell analytics-section">
+        <div class="section-heading">
+          <p class="eyebrow">Collections Analytics</p>
+          <h2>See cash recovered, customers at risk, and what is expected this week.</h2>
+        </div>
+        <div class="analytics-grid">
+          <article class="analytics-card large">
+            <div class="card-header">
+              <div>
+                <p class="muted-label">Cash recovered checklist</p>
+                <h3>$126,500 collected this month</h3>
+              </div>
+              <span class="status-pill green">On pace</span>
+            </div>
+            <div class="recovery-list">
+              <label>
+                <input type="checkbox" checked />
+                <span>Acme Supply - $22,400 recovered</span>
+              </label>
+              <label>
+                <input type="checkbox" checked />
+                <span>Northstar Retail - $41,800 recovered</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>Beta Logistics - $18,000 expected Friday</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>Delta Foods - $12,700 payment plan pending</span>
+              </label>
+            </div>
+          </article>
+          <article class="analytics-card">
+            <p class="muted-label">Average days to collect</p>
+            <strong>28.4</strong>
+            <span>Down from 43.1</span>
+          </article>
+          <article class="analytics-card">
+            <p class="muted-label">Collection rate</p>
+            <strong>81%</strong>
+            <span>Up 17% this quarter</span>
+          </article>
+          <article class="analytics-card risk">
+            <p class="muted-label">Customers at risk</p>
+            <strong>9</strong>
+            <span>3 need escalation today</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="demo" class="cta-section section-shell">
+        <div>
+          <p class="eyebrow">Built for clear, immediate ROI</p>
+          <h2>Give your AR team a copilot that turns follow-up into cash flow.</h2>
+          <p>
+            Launch with your accounting system and inbox, then let CollectionsAI
+            prioritize outreach, draft the message, and keep promises from falling through.
+          </p>
+        </div>
+        <a class="button primary light" href="mailto:hello@collectionsai.com">Request demo</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>CollectionsAI</span>
+      <p>AI-powered accounts receivable and collections workflow.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
