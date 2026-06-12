@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CollectionsAI App | Smart Collections Queue</title>
+    <link rel="stylesheet" href="/app/app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="/" aria-label="CollectionsAI homepage">
+          <span>CA</span>
+          CollectionsAI
+        </a>
+
+        <nav class="sidebar-nav" aria-label="App navigation">
+          <a class="active" href="#queue">Queue</a>
+          <a href="#draft">Draft</a>
+          <a href="#promises">Promises</a>
+          <a href="#setup">Setup</a>
+        </nav>
+
+        <div class="sidebar-note">
+          <strong>MVP mode</strong>
+          <p>Sample data is active until QuickBooks and email credentials are connected.</p>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="workspace-header">
+          <div>
+            <p class="eyebrow">Smart Collections Queue</p>
+            <h1>Today&apos;s highest-impact AR outreach</h1>
+          </div>
+          <a class="secondary-action" href="/">View marketing site</a>
+        </header>
+
+        <section id="setup" class="connection-grid" aria-label="Connection status">
+          <article class="connection-card" data-provider="qbo">
+            <div>
+              <span class="source-icon">QB</span>
+              <h2>QuickBooks Online</h2>
+              <p>Pull customers, invoices, balances, due dates, and payment status.</p>
+            </div>
+            <a class="connect-button" href="/api/qbo/connect">Connect QuickBooks</a>
+            <span class="connection-status">Checking...</span>
+          </article>
+
+          <article class="connection-card" data-provider="gmail">
+            <div>
+              <span class="source-icon">GM</span>
+              <h2>Gmail</h2>
+              <p>Read prior replies, draft reminders, send follow-ups, and track promises.</p>
+            </div>
+            <a class="connect-button" href="/api/gmail/connect">Connect Gmail</a>
+            <span class="connection-status">Checking...</span>
+          </article>
+
+          <article class="connection-card" data-provider="outlook">
+            <div>
+              <span class="source-icon">OL</span>
+              <h2>Outlook</h2>
+              <p>Connect Microsoft 365 inboxes through Microsoft Graph mail APIs.</p>
+            </div>
+            <a class="connect-button" href="/api/outlook/connect">Connect Outlook</a>
+            <span class="connection-status">Checking...</span>
+          </article>
+        </section>
+
+        <section class="setup-alert hidden" id="setupAlert" aria-live="polite">
+          <div>
+            <strong id="setupTitle">Credentials needed</strong>
+            <p id="setupMessage"></p>
+          </div>
+          <a href="/docs/setup.md">See setup guide</a>
+        </section>
+
+        <section class="metrics-row" aria-label="Collections metrics">
+          <article>
+            <span>$53,100</span>
+            <p>Queued for outreach</p>
+          </article>
+          <article>
+            <span>$96,000</span>
+            <p>Expected this week</p>
+          </article>
+          <article>
+            <span>37</span>
+            <p>Follow-ups ready</p>
+          </article>
+          <article>
+            <span>9</span>
+            <p>Customers at risk</p>
+          </article>
+        </section>
+
+        <div class="content-grid">
+          <section id="queue" class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">AI ranked</p>
+                <h2>Overdue invoice queue</h2>
+              </div>
+              <button id="sendAllButton" type="button">Queue 37 emails</button>
+            </div>
+            <div class="invoice-list" id="invoiceList"></div>
+          </section>
+
+          <section id="draft" class="panel draft-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">AI draft</p>
+                <h2 id="draftTitle">Select an invoice</h2>
+              </div>
+              <span class="draft-tone" id="draftTone">Tone</span>
+            </div>
+            <div class="draft-box">
+              <label for="draftBody">Follow-up email</label>
+              <textarea id="draftBody" rows="12"></textarea>
+            </div>
+            <div class="draft-actions">
+              <button id="copyDraftButton" type="button">Copy draft</button>
+              <button id="promiseButton" type="button">Log promise</button>
+            </div>
+          </section>
+        </div>
+
+        <section id="promises" class="panel promise-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Promise tracking</p>
+              <h2>Commitments the AI will not forget</h2>
+            </div>
+          </div>
+          <div class="promise-grid">
+            <article>
+              <strong>Beta Logistics</strong>
+              <p>Customer said they would confirm payment timing. Follow up today.</p>
+              <span>Needs confirmation</span>
+            </article>
+            <article>
+              <strong>Delta Foods</strong>
+              <p>Missed Friday commitment. Escalate with payment plan option.</p>
+              <span>Missed promise</span>
+            </article>
+            <article>
+              <strong>Northstar Retail</strong>
+              <p>Paid after second reminder. Marked recovered in analytics.</p>
+              <span>Recovered</span>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app/app.js"></script>
+  </body>
+</html>
