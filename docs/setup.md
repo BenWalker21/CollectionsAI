@@ -109,7 +109,27 @@ After OAuth is working, the production backend needs:
 
 - User accounts and login
 - A database for encrypted OAuth tokens
-- QuickBooks invoice sync jobs
+- QuickBooks invoice sync jobs that pull:
+  - customer email from `Customer.PrimaryEmailAddr.Address`
+  - fallback email from `Invoice.BillEmail.Address`
+  - payment link from `Invoice.InvoiceLink` when QBO provides it
+  - balance from `Invoice.Balance`
+  - due date from `Invoice.DueDate`
 - Gmail/Outlook message sync jobs
 - AI draft generation with approval before sending
 - Audit logs for every automated follow-up
+
+## Important QBO fields
+
+CollectionsAI needs QBO to provide two things for the paid email workflow:
+
+1. **Who to send to**
+   - Primary source: `Customer.PrimaryEmailAddr.Address`
+   - Fallback: `Invoice.BillEmail.Address`
+2. **Where the customer can pay**
+   - Preferred source: `Invoice.InvoiceLink`
+   - Fallback: a stored manual/generated payment URL
+
+If QBO does not expose an online invoice link for a specific invoice, the email
+draft should still be created, but it should ask the customer to reply or use a
+manually supplied payment link.

@@ -8,7 +8,7 @@ Users can start without connecting QuickBooks.
 2. Open the CollectionsAI website demo.
 3. Drag the CSV onto the upload box.
 4. Review the ranked collections queue.
-5. Copy, open, or export the suggested follow-up email drafts.
+5. Copy, open, or export the suggested follow-up email drafts with payment links included.
 6. Upload the next AR aging summary later to see what changed.
 
 ## Repeated uploads
@@ -31,13 +31,14 @@ The parser looks for a customer/name column plus either aging buckets or a balan
 Recommended columns:
 
 ```text
-Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total
+Customer,Email,Payment Link,Current,1 - 30,31 - 60,61 - 90,91 and over,Total
 ```
 
 Also supported:
 
 - `Name`, `Client`, or `Company` instead of `Customer`
 - `Email`, `Email Address`, `Contact Email`, `AP Email`, or `Billing Email`
+- `Payment Link`, `Pay Link`, `Invoice Link`, `Invoice URL`, or `Payment URL`
 - `Balance`, `Open Balance`, or `Amount Due` instead of `Total`
 - Common aging bucket variants such as `1-30`, `31-60`, `61-90`, and `90+`
 
@@ -46,12 +47,13 @@ Also supported:
 If the CSV includes email addresses, CollectionsAI can immediately:
 
 - Generate one follow-up draft per overdue customer
+- Include the invoice payment link in each draft when available
 - Open the selected draft in the user's email client
 - Export all drafts as `collectionsai-email-campaign.csv`
 
-The campaign CSV contains customer, email, subject, body, amount, days overdue,
-tone, and priority score. This is useful for Gmail, Outlook, or mail merge tools
-before direct inbox sending is connected.
+The campaign CSV contains customer, email, payment link, subject, body, amount,
+days overdue, tone, and priority score. This is useful for Gmail, Outlook, or
+mail merge tools before direct inbox sending is connected.
 
 ## Why this is the best first step
 

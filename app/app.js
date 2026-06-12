@@ -88,7 +88,10 @@ function renderInvoices() {
             <strong>${escapeHtml(invoice.customer)} - ${currency.format(invoice.amount)}</strong>
             <p>${escapeHtml(invoice.id)} - ${invoice.daysOverdue} days overdue - ${escapeHtml(invoice.likelihood)}</p>
             <p>${escapeHtml(invoice.reason)}</p>
-            <p class="email-status">${invoice.email ? `Ready for ${escapeHtml(invoice.email)}` : "Email address needed"}</p>
+            <p class="email-status">
+              ${invoice.email ? `Ready for ${escapeHtml(invoice.email)}` : "Email address needed"}
+              ${invoice.paymentLink ? " - payment link included" : " - payment link needed"}
+            </p>
           </div>
           <span class="score-pill">${invoice.priorityScore} score</span>
         </button>
@@ -147,15 +150,19 @@ function createEmailSubject(invoice) {
 }
 
 function createDraft(invoice) {
+  const paymentLine = invoice.paymentLink
+    ? `\n\nPayment link: ${invoice.paymentLink}`
+    : "\n\nIf helpful, I can resend the payment link.";
+
   if (invoice.tone === "Escalated") {
-    return `Hi ${invoice.contact},\n\nInvoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue, and the previous payment commitment was missed.\n\nPlease confirm whether payment can be completed today. If not, reply with a proposed payment plan so we can resolve the balance without further escalation.\n\nThank you,\nCollectionsAI`;
+    return `Hi ${invoice.contact},\n\nInvoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue, and the previous payment commitment was missed.${paymentLine}\n\nPlease confirm whether payment can be completed today. If not, reply with a proposed payment plan so we can resolve the balance without further escalation.\n\nThank you,\nCollectionsAI`;
   }
 
   if (invoice.tone === "Firm") {
-    return `Hi ${invoice.contact},\n\nI am following up on invoice ${invoice.id} for ${currency.format(invoice.amount)}, now ${invoice.daysOverdue} days overdue.\n\nPlease confirm the expected payment date today, or let me know if there is a blocker our team needs to resolve.\n\nThank you,\nCollectionsAI`;
+    return `Hi ${invoice.contact},\n\nI am following up on invoice ${invoice.id} for ${currency.format(invoice.amount)}, now ${invoice.daysOverdue} days overdue.${paymentLine}\n\nPlease confirm the expected payment date today, or let me know if there is a blocker our team needs to resolve.\n\nThank you,\nCollectionsAI`;
   }
 
-  return `Hi ${invoice.contact},\n\nHope you are doing well. I wanted to send a quick reminder that invoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue.\n\nCan you confirm payment timing when you have a moment?\n\nThank you,\nCollectionsAI`;
+  return `Hi ${invoice.contact},\n\nHope you are doing well. I wanted to send a quick reminder that invoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue.${paymentLine}\n\nCan you confirm payment timing when you have a moment?\n\nThank you,\nCollectionsAI`;
 }
 
 copyDraftButton.addEventListener("click", async () => {
@@ -202,10 +209,11 @@ openEmailButton.addEventListener("click", () => {
 
 downloadCampaignButton.addEventListener("click", () => {
   const rows = [
-    ["Customer", "Email", "Subject", "Body", "Amount", "Days Overdue", "Tone", "Priority Score"],
+    ["Customer", "Email", "Payment Link", "Subject", "Body", "Amount", "Days Overdue", "Tone", "Priority Score"],
     ...invoices.map((invoice) => [
       invoice.customer,
       invoice.email || "",
+      invoice.paymentLink || "",
       createEmailSubject(invoice),
       createDraft(invoice),
       invoice.amount,
@@ -446,6 +454,7 @@ function saveAgingSnapshot(sourceInvoices, fileName) {
     invoices: sourceInvoices.map((invoice) => ({
       customer: invoice.customer,
       email: invoice.email,
+      paymentLink: invoice.paymentLink,
       amount: invoice.amount,
       daysOverdue: invoice.daysOverdue,
     })),
@@ -464,6 +473,14 @@ function parseAgingCsv(csvText) {
   const headers = rows[0].map(normalizeHeader);
   const customerIndex = findHeader(headers, ["customer", "name", "client", "company"]);
   const emailIndex = findHeader(headers, ["email", "emailaddress", "contactemail", "apemail", "billingemail"]);
+  const paymentLinkIndex = findHeader(headers, [
+    "paymentlink",
+    "paylink",
+    "invoicelink",
+    "invoiceurl",
+    "paymenturl",
+    "payurl",
+  ]);
   const totalIndex = findHeader(headers, ["total", "balance", "openbalance", "amountdue"]);
   const currentIndex = findHeader(headers, ["current"]);
   const bucketIndexes = findAgingBuckets(headers);
@@ -479,13 +496,31 @@ function parseAgingCsv(csvText) {
   return rows
     .slice(1)
     .map((row, index) =>
-      agingRowToInvoice(row, index, customerIndex, emailIndex, totalIndex, currentIndex, bucketIndexes),
+      agingRowToInvoice(
+        row,
+        index,
+        customerIndex,
+        emailIndex,
+        paymentLinkIndex,
+        totalIndex,
+        currentIndex,
+        bucketIndexes,
+      ),
     )
     .filter(Boolean)
     .sort((a, b) => b.priorityScore - a.priorityScore || b.amount - a.amount);
 }
 
-function agingRowToInvoice(row, index, customerIndex, emailIndex, totalIndex, currentIndex, bucketIndexes) {
+function agingRowToInvoice(
+  row,
+  index,
+  customerIndex,
+  emailIndex,
+  paymentLinkIndex,
+  totalIndex,
+  currentIndex,
+  bucketIndexes,
+) {
   const customer = row[customerIndex]?.trim();
 
   if (!customer || /total/i.test(customer)) {
@@ -516,6 +551,7 @@ function agingRowToInvoice(row, index, customerIndex, emailIndex, totalIndex, cu
     id: `AGE-${String(index + 1).padStart(3, "0")}`,
     customer,
     email: emailIndex === -1 ? "" : row[emailIndex]?.trim(),
+    paymentLink: paymentLinkIndex === -1 ? "" : row[paymentLinkIndex]?.trim(),
     amount,
     daysOverdue,
     contact: "Accounts Payable",
@@ -634,21 +670,21 @@ function likelihoodForDays(daysOverdue) {
 
 function firstSampleAgingCsv() {
   return [
-    "Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
-    "Acme Supply,ap@acmesupply.example,1200,22400,0,0,0,23600",
-    "Beta Logistics,finance@betalogistics.example,0,0,18000,0,0,18000",
-    "Delta Foods,ap@deltafoods.example,0,0,0,0,12700,12700",
-    "Harbor Retail,accounting@harborretail.example,4000,6700,0,0,0,10700",
+    "Customer,Email,Payment Link,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,ap@acmesupply.example,https://pay.collectionsai.example/acme-1042,1200,22400,0,0,0,23600",
+    "Beta Logistics,finance@betalogistics.example,https://pay.collectionsai.example/beta-1088,0,0,18000,0,0,18000",
+    "Delta Foods,ap@deltafoods.example,https://pay.collectionsai.example/delta-1104,0,0,0,0,12700,12700",
+    "Harbor Retail,accounting@harborretail.example,https://pay.collectionsai.example/harbor-1120,4000,6700,0,0,0,10700",
   ].join("\n");
 }
 
 function nextSampleAgingCsv() {
   return [
-    "Customer,Email,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
-    "Acme Supply,ap@acmesupply.example,1200,0,0,0,0,1200",
-    "Beta Logistics,finance@betalogistics.example,0,0,9000,0,0,9000",
-    "Delta Foods,ap@deltafoods.example,0,0,0,0,12700,12700",
-    "Newport Services,billing@newportservices.example,0,5600,0,0,0,5600",
+    "Customer,Email,Payment Link,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+    "Acme Supply,ap@acmesupply.example,https://pay.collectionsai.example/acme-1042,1200,0,0,0,0,1200",
+    "Beta Logistics,finance@betalogistics.example,https://pay.collectionsai.example/beta-1088,0,0,9000,0,0,9000",
+    "Delta Foods,ap@deltafoods.example,https://pay.collectionsai.example/delta-1104,0,0,0,0,12700,12700",
+    "Newport Services,billing@newportservices.example,https://pay.collectionsai.example/newport-1131,0,5600,0,0,0,5600",
   ].join("\n");
 }
 

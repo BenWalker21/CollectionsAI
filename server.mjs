@@ -61,6 +61,10 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 200, providerStatus());
     }
 
+    if (url.pathname === "/api/qbo/field-map") {
+      return sendJson(response, 200, qboFieldMap());
+    }
+
     if (url.pathname === "/api/demo/invoices") {
       return sendJson(response, 200, demoInvoices());
     }
@@ -362,7 +366,7 @@ function connectionPage(providerLabel, message, linkText) {
     <main class="result-card">
       <p class="eyebrow">${escapeHtml(providerLabel)}</p>
       <h1>${escapeHtml(message)}</h1>
-      <a class="primary-action" href="/app/">${escapeHtml(linkText)}</a>
+      <a class="primary-action" href="/demo/">${escapeHtml(linkText)}</a>
     </main>
   </body>
 </html>`;
@@ -375,6 +379,7 @@ function demoInvoices() {
         id: "INV-1042",
         customer: "Acme Supply",
         email: "ap@acmesupply.example",
+        paymentLink: "https://pay.collectionsai.example/acme-1042",
         amount: 22400,
         daysOverdue: 18,
         contact: "Jordan Lee",
@@ -389,6 +394,7 @@ function demoInvoices() {
         id: "INV-1088",
         customer: "Beta Logistics",
         email: "finance@betalogistics.example",
+        paymentLink: "https://pay.collectionsai.example/beta-1088",
         amount: 18000,
         daysOverdue: 31,
         contact: "Morgan Patel",
@@ -403,6 +409,7 @@ function demoInvoices() {
         id: "INV-1104",
         customer: "Delta Foods",
         email: "ap@deltafoods.example",
+        paymentLink: "https://pay.collectionsai.example/delta-1104",
         amount: 12700,
         daysOverdue: 45,
         contact: "Riley Chen",
@@ -414,6 +421,30 @@ function demoInvoices() {
         promise: "Missed Friday commitment",
       },
     ],
+  };
+}
+
+function qboFieldMap() {
+  return {
+    customerEmail: {
+      source: "Customer.PrimaryEmailAddr.Address",
+      fallback: "Invoice.BillEmail.Address",
+      note: "Customer email can be pulled from the QBO customer record, with invoice BillEmail as a fallback.",
+    },
+    paymentLink: {
+      source: "Invoice.InvoiceLink",
+      fallback: "Generated payment URL if QBO online payments/link is unavailable",
+      note:
+        "QBO payment links depend on invoice/payment settings. If QBO does not return an InvoiceLink, store a manual or generated payment URL.",
+    },
+    invoiceBalance: {
+      source: "Invoice.Balance",
+      note: "Open balance used for queue amount and recovery comparison.",
+    },
+    invoiceDueDate: {
+      source: "Invoice.DueDate",
+      note: "Due date is used to determine aging and tone.",
+    },
   };
 }
 

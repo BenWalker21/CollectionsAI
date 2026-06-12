@@ -26,15 +26,17 @@ It includes:
 - Sample or uploaded overdue invoice queue
 - AI priority reasons
 - Ready-to-send follow-up email drafts
+- Payment link parsing and inclusion in email drafts
 - Campaign CSV export for email outreach
 - Promise tracking examples
 - Stripe Checkout scaffold for paid subscription access
 
 The fastest MVP path is uploading an AR aging summary exported from QuickBooks,
-Xero, or an ERP with customer email addresses. Users can export approved email
-drafts immediately. Paid users can link Gmail or Outlook so drafts are created
-for review inside their inbox. OAuth and Stripe routes are scaffolded in `server.mjs`;
-real payments and email linking require credentials in `.env`.
+Xero, or an ERP with customer email addresses and payment links. Users can export
+approved email drafts immediately. Paid users can link QBO, Gmail, or Outlook so
+customer emails, payment links, and drafts flow automatically. OAuth and Stripe
+routes are scaffolded in `server.mjs`; real payments and email linking require
+credentials in `.env`.
 
 ## Local preview
 
@@ -61,5 +63,6 @@ npm run check
 ## Setup guides
 
 See [docs/setup.md](docs/setup.md) for the QuickBooks, Gmail, and Outlook credential setup steps.
+See [docs/qbo-email-payment-links.md](docs/qbo-email-payment-links.md) for QBO email/payment-link mapping.
 See [docs/ar-aging-upload.md](docs/ar-aging-upload.md) for the upload-first MVP workflow.
 See [docs/billing.md](docs/billing.md) for Stripe subscription setup.
