@@ -28,6 +28,10 @@ This lets users prove collections progress without a full QuickBooks connection.
 
 The parser looks for a customer/name column plus either aging buckets or a balance column.
 
+QuickBooks AR Aging Summary exports are supported. The parser skips QBO report
+title rows, detects the aging bucket header row, and uses `Total for ...` rows as
+customer-level balances.
+
 Recommended columns:
 
 ```text

@@ -478,8 +478,15 @@ function parseAgingCsv(csvText) {
     throw new Error("The CSV needs a header row and at least one customer row.");
   }
 
-  const headers = rows[0].map(normalizeHeader);
-  const customerIndex = findHeader(headers, ["customer", "name", "client", "company"]);
+  const headerRowIndex = findAgingHeaderRow(rows);
+
+  if (headerRowIndex === -1) {
+    throw new Error("I could not find the AR aging header row.");
+  }
+
+  const headers = rows[headerRowIndex].map(normalizeHeader);
+  const explicitCustomerIndex = findHeader(headers, ["customer", "name", "client", "company"]);
+  const customerIndex = explicitCustomerIndex === -1 ? 0 : explicitCustomerIndex;
   const emailIndex = findHeader(headers, ["email", "emailaddress", "contactemail", "apemail", "billingemail"]);
   const paymentLinkIndex = findHeader(headers, [
     "paymentlink",
@@ -501,9 +508,87 @@ function parseAgingCsv(csvText) {
     throw new Error("I could not find aging buckets or a total balance column.");
   }
 
-  return rows
-    .slice(1)
-    .map((row, index) =>
+  return qboAgingRowsToInvoices(
+    rows.slice(headerRowIndex + 1),
+    customerIndex,
+    emailIndex,
+    paymentLinkIndex,
+    totalIndex,
+    currentIndex,
+    bucketIndexes,
+  )
+    .filter(Boolean)
+    .sort((a, b) => b.priorityScore - a.priorityScore || b.amount - a.amount);
+}
+
+function findAgingHeaderRow(rows) {
+  return rows.findIndex((row) => {
+    const headers = row.map(normalizeHeader);
+    const hasTotal = findHeader(headers, ["total", "balance", "openbalance", "amountdue"]) !== -1;
+    const hasCurrent = findHeader(headers, ["current"]) !== -1;
+    const hasBucket = findAgingBuckets(headers).length > 0;
+
+    return hasTotal && (hasCurrent || hasBucket);
+  });
+}
+
+function qboAgingRowsToInvoices(
+  dataRows,
+  customerIndex,
+  emailIndex,
+  paymentLinkIndex,
+  totalIndex,
+  currentIndex,
+  bucketIndexes,
+) {
+  const totalCustomerKeys = new Set(
+    dataRows
+      .map((row) => parseQboTotalCustomer(row[customerIndex]))
+      .filter(Boolean)
+      .map(customerKey),
+  );
+  const invoices = [];
+  let currentGroup = "";
+
+  dataRows.forEach((row, index) => {
+    const rawCustomer = row[customerIndex]?.trim();
+
+    if (!rawCustomer || /^total$/i.test(rawCustomer)) {
+      return;
+    }
+
+    const totalCustomer = parseQboTotalCustomer(rawCustomer);
+
+    if (totalCustomer) {
+      invoices.push(
+        agingRowToInvoice(
+          row,
+          index,
+          customerIndex,
+          emailIndex,
+          paymentLinkIndex,
+          totalIndex,
+          currentIndex,
+          bucketIndexes,
+          totalCustomer,
+        ),
+      );
+      currentGroup = "";
+      return;
+    }
+
+    const rowHasAmount = rowHasAgingAmount(row, totalIndex, currentIndex, bucketIndexes);
+
+    if (!rowHasAmount) {
+      currentGroup = rawCustomer;
+      return;
+    }
+
+    if (currentGroup && totalCustomerKeys.has(customerKey(currentGroup))) {
+      return;
+    }
+
+    invoices.push(
       agingRowToInvoice(
         row,
         index,
@@ -513,10 +598,25 @@ function parseAgingCsv(csvText) {
         totalIndex,
         currentIndex,
         bucketIndexes,
+        currentGroup || rawCustomer,
       ),
-    )
-    .filter(Boolean)
-    .sort((a, b) => b.priorityScore - a.priorityScore || b.amount - a.amount);
+    );
+  });
+
+  return invoices;
+}
+
+function parseQboTotalCustomer(value = "") {
+  const match = String(value).trim().match(/^total\s+for\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+function rowHasAgingAmount(row, totalIndex, currentIndex, bucketIndexes) {
+  const total = totalIndex === -1 ? 0 : parseMoney(row[totalIndex]);
+  const current = currentIndex === -1 ? 0 : parseMoney(row[currentIndex]);
+  const buckets = bucketIndexes.reduce((sum, bucket) => sum + parseMoney(row[bucket.index]), 0);
+
+  return total > 0 || current > 0 || buckets > 0;
 }
 
 function agingRowToInvoice(
@@ -528,10 +628,11 @@ function agingRowToInvoice(
   totalIndex,
   currentIndex,
   bucketIndexes,
+  customerOverride = "",
 ) {
-  const customer = row[customerIndex]?.trim();
+  const customer = customerOverride || row[customerIndex]?.trim();
 
-  if (!customer || /total/i.test(customer)) {
+  if (!customer || /^total$/i.test(customer)) {
     return null;
   }
 
