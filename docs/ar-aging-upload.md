@@ -5,7 +5,7 @@ Users can start without connecting QuickBooks.
 ## User workflow
 
 1. Export an AR aging summary from QuickBooks, Xero, or an ERP as a CSV file.
-2. Open the CollectionsAI app.
+2. Open the CollectionsAI website demo.
 3. Drag the CSV onto the upload box.
 4. Review the ranked collections queue.
 5. Copy, open, or export the suggested follow-up email drafts.
@@ -55,7 +55,7 @@ before direct inbox sending is connected.
 
 ## Why this is the best first step
 
-AR aging upload avoids the friction of OAuth setup and app review while still proving the core value:
+AR aging upload avoids the friction of OAuth setup while still proving the core value:
 
 - Identify overdue balances
 - Rank the highest-impact customers

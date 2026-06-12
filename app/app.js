@@ -65,7 +65,7 @@ async function loadConnectionStatus() {
   } catch {
     showSetupAlert(
       "Connection status unavailable",
-      "The app could not reach the local server status endpoint.",
+      "The website demo could not reach the local server status endpoint.",
     );
   }
 }
@@ -659,6 +659,15 @@ function customerKey(customer) {
 function showSetupMessageFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const provider = params.get("setup");
+  const paid = params.get("paid");
+
+  if (paid === "success") {
+    showSetupAlert(
+      "Payment received",
+      "This is where the paid website workspace would unlock uploads, email linking, and draft creation.",
+    );
+    return;
+  }
 
   if (!provider) {
     return;
@@ -668,11 +677,14 @@ function showSetupMessageFromQuery() {
     qbo: "QuickBooks credentials needed",
     gmail: "Google credentials needed",
     outlook: "Microsoft credentials needed",
+    billing: "Stripe billing setup needed",
   };
 
   showSetupAlert(
     labels[provider] || "OAuth credentials needed",
-    "I added the connection route, but you still need to create a developer app and add credentials before this button can connect a real account.",
+    provider === "billing"
+      ? "The subscription button is wired for Stripe Checkout. Add Stripe keys before taking real payments."
+      : "The connection route is ready, but provider credentials are needed before this can connect a real account.",
   );
 }
 

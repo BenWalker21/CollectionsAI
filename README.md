@@ -1,6 +1,6 @@
 # CollectionsAI
 
-CollectionsAI is a marketing homepage and MVP app shell for an AI collections copilot.
+CollectionsAI is a marketing website and paid-workspace demo for an AI collections copilot.
 
 The project presents the product concept around:
 
@@ -10,12 +10,12 @@ The project presents the product concept around:
 - Promise-to-pay tracking
 - Collections analytics and recovered cash reporting
 
-## App demo
+## Website demo
 
-The MVP app is available at:
+The website demo is available at:
 
 ```text
-/app/
+/demo/
 ```
 
 It includes:
@@ -28,11 +28,13 @@ It includes:
 - Ready-to-send follow-up email drafts
 - Campaign CSV export for email outreach
 - Promise tracking examples
+- Stripe Checkout scaffold for paid subscription access
 
 The fastest MVP path is uploading an AR aging summary exported from QuickBooks,
 Xero, or an ERP with customer email addresses. Users can export approved email
-drafts immediately. Connection routes are scaffolded in `server.mjs` for later.
-Real Gmail/Outlook sending requires OAuth credentials in `.env`.
+drafts immediately. Paid users can link Gmail or Outlook so drafts are created
+for review inside their inbox. OAuth and Stripe routes are scaffolded in `server.mjs`;
+real payments and email linking require credentials in `.env`.
 
 ## Local preview
 
@@ -60,3 +62,4 @@ npm run check
 
 See [docs/setup.md](docs/setup.md) for the QuickBooks, Gmail, and Outlook credential setup steps.
 See [docs/ar-aging-upload.md](docs/ar-aging-upload.md) for the upload-first MVP workflow.
+See [docs/billing.md](docs/billing.md) for Stripe subscription setup.

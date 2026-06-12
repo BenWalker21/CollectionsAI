@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CollectionsAI App | Smart Collections Queue</title>
+    <title>CollectionsAI Demo | Smart Collections Queue</title>
     <link rel="stylesheet" href="/app/app.css" />
   </head>
   <body>
@@ -14,7 +14,7 @@
           CollectionsAI
         </a>
 
-        <nav class="sidebar-nav" aria-label="App navigation">
+        <nav class="sidebar-nav" aria-label="Website demo navigation">
           <a href="#upload">Upload AR</a>
           <a class="active" href="#queue">Queue</a>
           <a href="#recovered">Recovered</a>
@@ -26,26 +26,26 @@
 
         <div class="sidebar-note">
           <strong>MVP mode</strong>
-          <p>Start with AR aging plus email addresses. Gmail and Outlook can connect later.</p>
+          <p>Website demo mode. Paid users can link Gmail or Outlook for drafts.</p>
         </div>
       </aside>
 
       <main class="workspace">
         <header class="workspace-header">
           <div>
-            <p class="eyebrow">Smart Collections Queue</p>
-            <h1>Upload AR aging and get ready-to-send collection emails</h1>
+            <p class="eyebrow">Website demo</p>
+            <h1>Upload AR aging. Generate email drafts.</h1>
           </div>
           <a class="secondary-action" href="/">View marketing site</a>
         </header>
 
         <section id="upload" class="upload-panel">
           <div>
-            <p class="eyebrow">Fastest MVP path</p>
+            <p class="eyebrow">See it in action</p>
             <h2>Drag and drop an AR aging summary</h2>
             <p>
-              Export AR aging from QuickBooks, Xero, or your ERP as CSV. Include
-              an Email column to generate customer-ready collection outreach.
+              Use the sample file or upload a CSV with an Email column.
+              The website creates drafts for review.
             </p>
           </div>
           <label class="drop-zone" id="dropZone" for="agingFileInput">
@@ -59,6 +59,21 @@
           <button class="sample-button secondary-sample" id="sampleFollowupButton" type="button">
             Use next sample
           </button>
+        </section>
+
+        <section class="demo-guide panel" aria-label="Demo walkthrough">
+          <article>
+            <span>1</span>
+            <p>Click <strong>Use first sample</strong>.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <p>Select a customer in the queue.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <p>Open the email draft or download the campaign CSV.</p>
+          </article>
         </section>
 
         <section id="setup" class="connection-grid" aria-label="Connection status">
@@ -76,7 +91,7 @@
             <div>
               <span class="source-icon">GM</span>
               <h2>Gmail</h2>
-              <p>Read prior replies, draft reminders, send follow-ups, and track promises.</p>
+              <p>Paid users connect Gmail to create drafts inside their inbox.</p>
             </div>
             <a class="connect-button" href="/api/gmail/connect">Connect Gmail</a>
             <span class="connection-status">Checking...</span>
@@ -86,7 +101,7 @@
             <div>
               <span class="source-icon">OL</span>
               <h2>Outlook</h2>
-              <p>Connect Microsoft 365 inboxes through Microsoft Graph mail APIs.</p>
+              <p>Paid users connect Outlook to create drafts inside Microsoft 365.</p>
             </div>
             <a class="connect-button" href="/api/outlook/connect">Connect Outlook</a>
             <span class="connection-status">Checking...</span>
@@ -150,7 +165,7 @@
             </article>
             <article>
               <span>Approve first</span>
-              <p>drafts are prepared for review before any send step</p>
+              <p>drafts are created for review; users send them</p>
             </article>
           </div>
         </section>

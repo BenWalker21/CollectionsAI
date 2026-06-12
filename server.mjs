@@ -65,6 +65,14 @@ const server = createServer(async (request, response) => {
       return sendJson(response, 200, demoInvoices());
     }
 
+    if (url.pathname === "/api/billing/checkout") {
+      return startBillingCheckout(response);
+    }
+
+    if (url.pathname === "/demo" || url.pathname === "/demo/") {
+      return serveFile("/app/index.html", response);
+    }
+
     if (url.pathname.endsWith("/connect")) {
       const provider = providerFromPath(url.pathname);
       if (provider) {
@@ -142,6 +150,40 @@ function providerStatus() {
       },
     ]),
   );
+}
+
+async function startBillingCheckout(response) {
+  const missing = ["STRIPE_SECRET_KEY", "STRIPE_PRICE_ID"].filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    return redirect(response, "/demo/?setup=billing");
+  }
+
+  const successUrl = process.env.STRIPE_SUCCESS_URL || `${publicBaseUrl()}/demo/?paid=success`;
+  const cancelUrl = process.env.STRIPE_CANCEL_URL || `${publicBaseUrl()}/#paid`;
+  const body = new URLSearchParams({
+    mode: "subscription",
+    "line_items[0][price]": process.env.STRIPE_PRICE_ID,
+    "line_items[0][quantity]": "1",
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+  });
+
+  const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  if (!stripeResponse.ok) {
+    return redirect(response, "/demo/?setup=billing");
+  }
+
+  const session = await stripeResponse.json();
+  return redirect(response, session.url);
 }
 
 function missingEnv(provider) {
@@ -395,6 +437,14 @@ async function serveStatic(pathname, response) {
     response.writeHead(200, { "Content-Type": mimeTypes[".html"] });
     response.end(data);
   }
+}
+
+async function serveFile(pathname, response) {
+  const filePath = resolve(ROOT, `.${pathname}`);
+  const data = await readFile(filePath);
+  const type = mimeTypes[extname(filePath)] || "application/octet-stream";
+  response.writeHead(200, { "Content-Type": type });
+  response.end(data);
 }
 
 function sendJson(response, status, payload) {

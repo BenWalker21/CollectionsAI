@@ -3,7 +3,7 @@
 The fastest MVP workflow is AR aging CSV upload. Users can try CollectionsAI
 without connecting QuickBooks or email.
 
-This guide is for the optional later workflow where the app connects directly to:
+This guide is for the optional later workflow where the paid website connects directly to:
 
 - QuickBooks Online
 - Gmail
@@ -97,10 +97,10 @@ Open:
 http://localhost:4173
 ```
 
-Then open the app:
+Then open the website demo:
 
 ```text
-http://localhost:4173/app/
+http://localhost:4173/demo/
 ```
 
 ## What still needs to be built after credentials work

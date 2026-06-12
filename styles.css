@@ -519,6 +519,7 @@ h3 {
 .split-section,
 .personalization-section,
 .promise-section,
+.paid-section,
 .cta-section {
   display: grid;
   grid-template-columns: 0.86fr 1.14fr;
@@ -739,6 +740,45 @@ h3 {
   background: #fcfaf5;
 }
 
+.paid-section {
+  grid-template-columns: 0.95fr 1.05fr;
+  padding-top: 98px;
+}
+
+.paid-section > div > p {
+  color: var(--muted);
+  font-size: 1.08rem;
+}
+
+.paid-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: var(--shadow);
+}
+
+.paid-card span {
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.paid-card strong {
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.paid-card p {
+  margin-bottom: 4px;
+  color: var(--muted);
+}
+
 .cta-section {
   grid-template-columns: 1fr auto;
   margin-top: 98px;
@@ -793,6 +833,7 @@ h3 {
   .split-section,
   .personalization-section,
   .promise-section,
+  .paid-section,
   .cta-section {
     grid-template-columns: 1fr;
   }
@@ -877,6 +918,7 @@ h3 {
   .split-section,
   .personalization-section,
   .promise-section,
+  .paid-section,
   .pipeline-section,
   .workflow-section,
   .analytics-section {
