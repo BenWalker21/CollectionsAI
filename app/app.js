@@ -20,6 +20,7 @@ const dropZone = document.querySelector("#dropZone");
 const agingFileInput = document.querySelector("#agingFileInput");
 const sampleUploadButton = document.querySelector("#sampleUploadButton");
 const sampleFollowupButton = document.querySelector("#sampleFollowupButton");
+const templateButton = document.querySelector("#templateButton");
 const queuedMetric = document.querySelector("#queuedMetric");
 const recoveredMetric = document.querySelector("#recoveredMetric");
 const followupMetric = document.querySelector("#followupMetric");
@@ -222,17 +223,7 @@ downloadCampaignButton.addEventListener("click", () => {
       invoice.priorityScore,
     ]),
   ];
-  const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.download = "collectionsai-email-campaign.csv";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  downloadCsv("collectionsai-email-campaign.csv", rows);
 });
 
 dropZone.addEventListener("dragover", (event) => {
@@ -266,6 +257,23 @@ sampleFollowupButton.addEventListener("click", () => {
   }
 
   loadAgingCsv(nextSampleAgingCsv(), "sample-aging-week-2.csv");
+});
+
+templateButton.addEventListener("click", () => {
+  downloadCsv("collectionsai-ar-template.csv", [
+    ["Customer", "Email", "Payment Link", "Current", "1 - 30", "31 - 60", "61 - 90", "91 and over", "Total"],
+    [
+      "Example Customer",
+      "ap@example.com",
+      "https://pay.example.com/invoice-1001",
+      "0",
+      "1000",
+      "0",
+      "0",
+      "0",
+      "1000",
+    ],
+  ]);
 });
 
 async function handleAgingFile(file) {
@@ -742,4 +750,18 @@ function escapeHtml(value) {
 function escapeCsvCell(value) {
   const stringValue = String(value ?? "");
   return `"${stringValue.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename, rows) {
+  const csv = rows.map((row) => row.map(escapeCsvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }

@@ -6,7 +6,7 @@ Users can start without connecting QuickBooks.
 
 1. Export an AR aging summary from QuickBooks, Xero, or an ERP as a CSV file.
 2. Open the CollectionsAI website demo.
-3. Drag the CSV onto the upload box.
+3. Drag the CSV onto the upload box, or click **Upload your AR CSV**.
 4. Review the ranked collections queue.
 5. Copy, open, or export the suggested follow-up email drafts with payment links included.
 6. Upload the next AR aging summary later to see what changed.
@@ -41,6 +41,21 @@ Also supported:
 - `Payment Link`, `Pay Link`, `Invoice Link`, `Invoice URL`, or `Payment URL`
 - `Balance`, `Open Balance`, or `Amount Due` instead of `Total`
 - Common aging bucket variants such as `1-30`, `31-60`, `61-90`, and `90+`
+
+## Using real company data
+
+For the website demo, upload a CSV export only. If QuickBooks gives you Excel,
+save/export the file as CSV first.
+
+The demo processes the CSV in the browser. It does not store the uploaded file
+on the server. Production paid accounts should store data in a secure database
+with user accounts and access controls.
+
+If your AR aging export does not include email addresses or payment links,
+CollectionsAI will still rank the queue, but the draft will show:
+
+- `Email address needed`
+- `payment link needed`
 
 ## Email workflow
 
