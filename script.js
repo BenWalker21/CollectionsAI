@@ -38,6 +38,6 @@ const batchStatus = document.querySelector("#sendBatchStatus");
 
 batchButton.addEventListener("click", () => {
   batchButton.classList.add("sent");
-  batchButton.textContent = "37 follow-ups queued";
-  batchStatus.textContent = "Promise tracking and escalation reminders are now active.";
+  batchButton.textContent = "37 emails prepared";
+  batchStatus.textContent = "Ready for review before sending.";
 });

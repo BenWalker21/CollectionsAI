@@ -25,9 +25,8 @@
         </a>
         <div class="nav-links">
           <a href="#pipeline">Pipeline</a>
-          <a href="#copilot">Copilot</a>
-          <a href="#queue">Queue</a>
-          <a href="#analytics">Analytics</a>
+          <a href="#copilot">Email</a>
+          <a href="#analytics">Recovery</a>
           <a href="#demo">Demo</a>
         </div>
         <a class="nav-cta" href="/app/">Open app</a>
@@ -37,66 +36,59 @@
     <main id="top">
       <section class="hero section-shell">
         <div class="hero-copy">
-          <p class="eyebrow">AI collections pipeline for modern finance teams</p>
-          <h1>Stop chasing invoices. Start running a collections pipeline.</h1>
+          <p class="eyebrow">AI collections pipeline</p>
+          <h1>Collect faster, without the chase.</h1>
           <p class="hero-subtitle">
-            Upload an AR aging summary or connect QuickBooks Online, Xero, Stripe,
-            ERP data, Gmail, or Outlook. CollectionsAI identifies overdue balances,
-            prioritizes the right accounts, drafts ready-to-send follow-up emails,
-            tracks every promise to pay, and shows what cash was recovered on the
-            next upload.
+            Upload AR aging. Get a prioritized queue. Send approved follow-ups.
+            See what was paid on the next upload.
           </p>
           <div class="hero-actions">
             <a class="button primary" href="/app/">Open the MVP app</a>
             <a class="button secondary" href="mailto:hello@collectionsai.com">Request demo</a>
           </div>
-          <div class="integration-row" aria-label="Supported integrations">
+          <div class="integration-row" aria-label="Supported workflow">
             <span>CSV upload</span>
-            <span>QBO</span>
-            <span>Xero</span>
-            <span>Stripe</span>
-            <span>ERP</span>
-            <span>Gmail</span>
-            <span>Outlook</span>
+            <span>Email drafts</span>
+            <span>Cash recovered</span>
           </div>
         </div>
 
         <div class="dashboard-card hero-dashboard" aria-label="Collections dashboard preview">
           <div class="card-header">
             <div>
-              <p class="muted-label">Today&apos;s queue</p>
-              <h2>$81,900 prioritized</h2>
+              <p class="muted-label">Today</p>
+              <h2>$81,900 queued</h2>
             </div>
-            <span class="status-pill">AI ranked</span>
+            <span class="status-pill">Ready</span>
           </div>
 
           <div class="queue-list">
             <article class="queue-item high">
               <div>
                 <strong>Acme Supply</strong>
-                <p>$22,400 - likely to pay</p>
+                <p>$22,400 overdue</p>
               </div>
-              <span>Send email</span>
+              <span>Email</span>
             </article>
             <article class="queue-item">
               <div>
                 <strong>Beta Logistics</strong>
-                <p>$18,000 - overdue 31 days</p>
+                <p>$18,000 overdue</p>
               </div>
-              <span>Firm tone</span>
+              <span>Drafted</span>
             </article>
             <article class="queue-item call">
               <div>
                 <strong>Delta Foods</strong>
-                <p>$12,700 - call recommended</p>
+                <p>$12,700 overdue</p>
               </div>
-              <span>Call</span>
+              <span>Escalate</span>
             </article>
           </div>
 
           <div class="one-click">
-            <button id="sendBatchButton" type="button">Send 37 follow-ups</button>
-            <p id="sendBatchStatus" aria-live="polite">Estimated cash impact: $48,200</p>
+            <button id="sendBatchButton" type="button">Prepare 37 emails</button>
+            <p id="sendBatchStatus" aria-live="polite">$48,200 estimated recovery</p>
           </div>
         </div>
       </section>
@@ -104,81 +96,77 @@
       <section class="metrics-bar section-shell" aria-label="Collections metrics">
         <article>
           <span>$428K</span>
-          <p>Outstanding AR surfaced</p>
+          <p>AR surfaced</p>
         </article>
         <article>
           <span>34%</span>
-          <p>Faster average collection cycle</p>
+          <p>Faster collections</p>
         </article>
         <article>
           <span>$96K</span>
-          <p>Expected collections this week</p>
+          <p>Expected this week</p>
         </article>
         <article>
           <span>92%</span>
-          <p>Promise follow-up completion</p>
+          <p>Promises tracked</p>
         </article>
       </section>
 
       <section id="pipeline" class="section-shell pipeline-section">
         <div class="section-heading centered">
-          <p class="eyebrow">Six stages. Zero spreadsheet chaos.</p>
-          <h2>From AR aging export to approved collection outreach.</h2>
+          <p class="eyebrow">The pipeline</p>
+          <h2>Six simple steps.</h2>
           <p>
-            CollectionsAI gives finance teams a clear operating system for collections:
-            upload the aging, rank the queue, approve the emails, track promises,
-            and prove recovered cash when the next summary arrives.
+            A calm workflow for the collections work your team already does.
           </p>
         </div>
 
         <div class="pipeline-steps" aria-label="CollectionsAI pipeline stages">
           <article class="pipeline-step">
             <span>1</span>
-            <h3>Upload AR Aging</h3>
-            <p>Drop in a CSV from QBO, Xero, or your ERP with customer balances and emails.</p>
+            <h3>Upload</h3>
+            <p>Drop in AR aging.</p>
           </article>
           <article class="pipeline-step">
             <span>2</span>
-            <h3>Prioritize Queue</h3>
-            <p>AI ranks accounts by overdue amount, aging bucket, and collection urgency.</p>
+            <h3>Prioritize</h3>
+            <p>See who matters first.</p>
           </article>
           <article class="pipeline-step">
             <span>3</span>
-            <h3>Draft Emails</h3>
-            <p>Every customer gets a reviewed, tone-matched follow-up ready to send.</p>
+            <h3>Draft</h3>
+            <p>Generate clean follow-ups.</p>
           </article>
           <article class="pipeline-step active">
             <span>4</span>
-            <h3>Send Follow-ups</h3>
-            <p>Open one email, export a campaign CSV, or connect Gmail/Outlook later.</p>
+            <h3>Send</h3>
+            <p>Approve before anything goes out.</p>
           </article>
           <article class="pipeline-step">
             <span>5</span>
-            <h3>Track Promises</h3>
-            <p>Log commitments like "paying Friday" so missed promises do not disappear.</p>
+            <h3>Track</h3>
+            <p>Never lose a promise.</p>
           </article>
           <article class="pipeline-step">
             <span>6</span>
-            <h3>Measure Recovery</h3>
-            <p>Upload the next aging summary to see paid, reduced, new, and increased balances.</p>
+            <h3>Measure</h3>
+            <p>See what was paid.</p>
           </article>
         </div>
 
         <div class="pipeline-demo">
           <div>
-            <p class="eyebrow">Your collections pipeline</p>
-            <h3>Today&apos;s approved outreach</h3>
+            <p class="eyebrow">Output</p>
+            <h3>Approved outreach, ready today.</h3>
             <p>
-              37 customer emails prepared from the latest AR aging export.
-              $48,200 estimated recovery impact.
+              Drafts, priorities, and recovered cash in one place.
             </p>
           </div>
           <div class="pipeline-output">
             <span>Sample output</span>
             <strong>Acme Supply - $22,400 overdue</strong>
             <p>
-              Friendly but direct reminder drafted for ap@acmesupply.com with
-              invoice context, payment timing request, and follow-up tracking.
+              Friendly reminder drafted for ap@acmesupply.com.
             </p>
           </div>
         </div>
@@ -186,63 +174,33 @@
 
       <section id="copilot" class="section-shell split-section">
         <div>
-          <p class="eyebrow">AI Collections Copilot</p>
-          <h2>Know the next step for every overdue customer.</h2>
+          <p class="eyebrow">Email-first</p>
+          <h2>The selling point is the follow-up.</h2>
           <p>
-            CollectionsAI turns static AR aging exports into a daily execution plan:
-            who to contact, what to send, when to escalate, and what changed after
-            the next aging summary.
+            CollectionsAI turns balances into customer-ready messages.
+            Review, copy, export, or send when inboxes are connected.
           </p>
         </div>
         <div class="feature-grid">
           <article class="feature-card">
             <span class="feature-number">01</span>
-            <h3>Identify overdue invoices</h3>
-            <p>Sync AR data from accounting systems and spot aging balances automatically.</p>
+            <h3>Right customer</h3>
+            <p>Ranked by impact.</p>
           </article>
           <article class="feature-card">
             <span class="feature-number">02</span>
-            <h3>Prioritize by impact</h3>
-            <p>Rank outreach by amount owed, days overdue, customer behavior, and pay likelihood.</p>
+            <h3>Right tone</h3>
+            <p>Friendly, firm, or escalated.</p>
           </article>
           <article class="feature-card">
             <span class="feature-number">03</span>
-            <h3>Draft smart follow-ups</h3>
-            <p>Generate emails that match the customer relationship, payment history, and context.</p>
+            <h3>Right channel</h3>
+            <p>Email now. Gmail/Outlook later.</p>
           </article>
           <article class="feature-card">
             <span class="feature-number">04</span>
-            <h3>Escalate over time</h3>
-            <p>Move from friendly reminders to direct payment timing and structured plans.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="queue" class="section-shell workflow-section">
-        <div class="section-heading centered">
-          <p class="eyebrow">Smart Collections Queue</p>
-          <h2>Every morning starts with the highest-impact outreach.</h2>
-          <p>
-            Stop scanning spreadsheets. CollectionsAI gives the team a ranked action list
-            with suggested channels, tone, and expected recovery impact.
-          </p>
-        </div>
-
-        <div class="workflow-grid">
-          <article class="workflow-card">
-            <span>Day 7</span>
-            <h3>Friendly reminder</h3>
-            <p>Warm, helpful language with invoice details and a simple payment link.</p>
-          </article>
-          <article class="workflow-card active">
-            <span>Day 21</span>
-            <h3>Confirm payment timing</h3>
-            <p>Ask for a concrete payment date and clarify whether anything is blocking payment.</p>
-          </article>
-          <article class="workflow-card">
-            <span>Day 45</span>
-            <h3>Escalation and plan</h3>
-            <p>Firm escalation with payment plan options and a clear next step.</p>
+            <h3>Right proof</h3>
+            <p>Measure what came in.</p>
           </article>
         </div>
       </section>
@@ -267,23 +225,20 @@
         </div>
 
         <div>
-          <p class="eyebrow">AI Email Personalization</p>
-          <h2>No more generic collection templates.</h2>
+          <p class="eyebrow">Tone</p>
+          <h2>Simple messages. Better timing.</h2>
           <p>
-            The copilot reads the invoice, customer history, and prior replies before drafting.
-            Friendly customers get softer language, chronic late payers get firmer follow-up,
-            and executives get concise context.
+            Start soft. Get firmer over time. Keep every email clear.
           </p>
         </div>
       </section>
 
       <section class="section-shell promise-section">
         <div>
-          <p class="eyebrow">Auto Promise Tracking</p>
-          <h2>When someone says &quot;paying Friday,&quot; the promise does not disappear.</h2>
+          <p class="eyebrow">Promises</p>
+          <h2>&quot;Paying Friday&quot; should not disappear.</h2>
           <p>
-            CollectionsAI logs commitments from replies, adds the next action,
-            follows up automatically, and alerts the team when a promise is missed.
+            Track commitments, follow-ups, and missed payments.
           </p>
         </div>
         <div class="promise-card">
@@ -307,14 +262,14 @@
 
       <section id="analytics" class="section-shell analytics-section">
         <div class="section-heading">
-          <p class="eyebrow">Collections Analytics</p>
-          <h2>See cash recovered, customers at risk, and what is expected this week.</h2>
+          <p class="eyebrow">Recovery</p>
+          <h2>Upload again. See what changed.</h2>
         </div>
         <div class="analytics-grid">
           <article class="analytics-card large">
             <div class="card-header">
               <div>
-                <p class="muted-label">Cash recovered checklist</p>
+                <p class="muted-label">Recovered</p>
                 <h3>$126,500 collected this month</h3>
               </div>
               <span class="status-pill green">On pace</span>
@@ -358,11 +313,10 @@
 
       <section id="demo" class="cta-section section-shell">
         <div>
-          <p class="eyebrow">Built for clear, immediate ROI</p>
-          <h2>Give your AR team a copilot that turns follow-up into cash flow.</h2>
+          <p class="eyebrow">Start simple</p>
+          <h2>Upload aging. Draft emails. Recover cash.</h2>
           <p>
-            Launch with your accounting system and inbox, then let CollectionsAI
-            prioritize outreach, draft the message, and keep promises from falling through.
+            A clean workflow your team can understand in one screen.
           </p>
         </div>
         <a class="button primary light" href="/app/">Open app</a>

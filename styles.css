@@ -1,19 +1,19 @@
 :root {
   color-scheme: light;
-  --bg: #f5f7fb;
+  --bg: #fbfaf7;
   --surface: #ffffff;
-  --surface-strong: #eef4ff;
-  --ink: #0c1b33;
-  --muted: #5d6b82;
-  --line: #dce5f2;
-  --blue: #2457ff;
-  --blue-dark: #163cc4;
-  --cyan: #12b7d8;
-  --green: #14a06f;
-  --amber: #d88916;
-  --shadow: 0 24px 70px rgba(28, 52, 91, 0.14);
-  --radius-lg: 30px;
-  --radius-md: 20px;
+  --surface-strong: #f3f0e8;
+  --ink: #141414;
+  --muted: #6f6a61;
+  --line: #e8e1d5;
+  --blue: #24463f;
+  --blue-dark: #102b26;
+  --cyan: #b89b5e;
+  --green: #2f6b4f;
+  --amber: #a57632;
+  --shadow: 0 18px 48px rgba(30, 24, 14, 0.08);
+  --radius-lg: 26px;
+  --radius-md: 18px;
   --radius-sm: 14px;
 }
 
@@ -27,10 +27,7 @@ html {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(36, 87, 255, 0.14), transparent 34rem),
-    radial-gradient(circle at 80% 12%, rgba(18, 183, 216, 0.16), transparent 24rem),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
   font-family: "Inter", Arial, sans-serif;
   line-height: 1.6;
@@ -53,8 +50,8 @@ select {
   top: 0;
   z-index: 10;
   backdrop-filter: blur(16px);
-  background: rgba(245, 247, 251, 0.84);
-  border-bottom: 1px solid rgba(220, 229, 242, 0.8);
+  background: rgba(251, 250, 247, 0.86);
+  border-bottom: 1px solid rgba(232, 225, 213, 0.8);
 }
 
 .nav,
@@ -89,7 +86,7 @@ select {
   background: linear-gradient(135deg, var(--blue), var(--cyan));
   color: #ffffff;
   font-size: 0.84rem;
-  box-shadow: 0 12px 28px rgba(36, 87, 255, 0.28);
+  box-shadow: none;
 }
 
 .nav-links {
@@ -159,14 +156,14 @@ select {
   grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
   align-items: center;
   gap: 54px;
-  padding: 86px 0 54px;
+  padding: 96px 0 58px;
 }
 
 .eyebrow,
 .muted-label {
   margin: 0 0 10px;
   color: var(--blue);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -184,18 +181,18 @@ p {
 }
 
 h1 {
-  max-width: 760px;
+  max-width: 720px;
   margin-bottom: 22px;
-  font-size: clamp(3.25rem, 7vw, 6.4rem);
-  line-height: 0.92;
-  letter-spacing: -0.075em;
+  font-size: clamp(3rem, 6.4vw, 5.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.065em;
 }
 
 h2 {
   margin-bottom: 18px;
-  font-size: clamp(2.1rem, 4vw, 3.8rem);
-  line-height: 1;
-  letter-spacing: -0.055em;
+  font-size: clamp(2rem, 3.6vw, 3.35rem);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
 }
 
 h3 {
@@ -217,7 +214,7 @@ h3 {
 .hero-subtitle {
   max-width: 680px;
   margin-bottom: 30px;
-  font-size: 1.2rem;
+  font-size: 1.13rem;
 }
 
 .hero-actions {
@@ -252,7 +249,7 @@ h3 {
 .promise-card,
 .analytics-card {
   border: 1px solid rgba(220, 229, 242, 0.92);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.76);
   box-shadow: var(--shadow);
 }
 
@@ -264,13 +261,7 @@ h3 {
 }
 
 .hero-dashboard::before {
-  position: absolute;
-  inset: -110px -120px auto auto;
-  width: 240px;
-  height: 240px;
-  border-radius: 999px;
-  background: rgba(18, 183, 216, 0.18);
-  content: "";
+  display: none;
 }
 
 .card-header {
@@ -324,12 +315,12 @@ h3 {
 }
 
 .queue-item.high {
-  border-color: rgba(36, 87, 255, 0.28);
-  box-shadow: 0 16px 34px rgba(36, 87, 255, 0.12);
+  border-color: rgba(36, 70, 63, 0.28);
+  box-shadow: none;
 }
 
 .queue-item.call {
-  background: #fffbf3;
+  background: #fcfaf5;
 }
 
 .queue-item p {
@@ -352,7 +343,7 @@ h3 {
   gap: 14px;
   padding: 14px;
   border-radius: 18px;
-  background: var(--surface-strong);
+  background: #f7f4ee;
 }
 
 .one-click button {
@@ -386,7 +377,7 @@ h3 {
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.72);
+  background: transparent;
 }
 
 .metrics-bar article {
@@ -410,34 +401,34 @@ h3 {
 }
 
 .pipeline-section {
-  padding-top: 98px;
+  padding-top: 104px;
 }
 
 .pipeline-steps {
   position: relative;
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
+  gap: 10px;
 }
 
 .pipeline-steps::before {
   position: absolute;
-  top: 37px;
+  top: 32px;
   right: 7%;
   left: 7%;
   height: 2px;
-  background: linear-gradient(90deg, rgba(36, 87, 255, 0.18), rgba(18, 183, 216, 0.34));
+  background: linear-gradient(90deg, rgba(36, 70, 63, 0.14), rgba(184, 155, 94, 0.32));
   content: "";
 }
 
 .pipeline-step {
   position: relative;
   display: grid;
-  min-height: 260px;
+  min-height: 188px;
   align-content: start;
   border-radius: var(--radius-md);
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.9);
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .pipeline-step span {
@@ -445,13 +436,13 @@ h3 {
   width: 36px;
   height: 36px;
   place-items: center;
-  margin-bottom: 58px;
+  margin-bottom: 38px;
   border-radius: 999px;
   color: #ffffff;
   background: var(--ink);
   font-size: 0.86rem;
   font-weight: 900;
-  box-shadow: 0 0 0 8px rgba(245, 247, 251, 0.96);
+  box-shadow: 0 0 0 8px var(--bg);
 }
 
 .pipeline-step h3 {
@@ -466,8 +457,8 @@ h3 {
 
 .pipeline-step.active {
   color: #ffffff;
-  background: linear-gradient(135deg, var(--blue), #0f2f9b);
-  transform: translateY(-8px);
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+  transform: translateY(-6px);
 }
 
 .pipeline-step.active span {
@@ -488,8 +479,7 @@ h3 {
   border-radius: var(--radius-lg);
   padding: 26px;
   background:
-    radial-gradient(circle at 100% 0, rgba(18, 183, 216, 0.16), transparent 18rem),
-    rgba(255, 255, 255, 0.9);
+    rgba(255, 255, 255, 0.72);
 }
 
 .pipeline-demo h3 {
@@ -507,7 +497,7 @@ h3 {
   border: 1px solid rgba(36, 87, 255, 0.16);
   border-radius: 22px;
   padding: 20px;
-  background: #ffffff;
+  background: #fffefa;
 }
 
 .pipeline-output span {
@@ -552,7 +542,7 @@ h3 {
 
 .feature-number {
   display: inline-flex;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
   color: var(--blue);
   font-weight: 800;
 }
@@ -597,7 +587,7 @@ h3 {
 
 .workflow-card.active {
   color: #ffffff;
-  background: linear-gradient(135deg, var(--blue), #0f2f9b);
+  background: linear-gradient(135deg, var(--blue), var(--blue-dark));
 }
 
 .workflow-card.active p,
@@ -745,8 +735,8 @@ h3 {
 }
 
 .analytics-card.risk {
-  border-color: rgba(216, 137, 22, 0.28);
-  background: #fffbf3;
+  border-color: rgba(165, 118, 50, 0.28);
+  background: #fcfaf5;
 }
 
 .cta-section {
@@ -757,8 +747,7 @@ h3 {
   border-radius: var(--radius-lg);
   color: #ffffff;
   background:
-    radial-gradient(circle at 90% 20%, rgba(18, 183, 216, 0.36), transparent 18rem),
-    linear-gradient(135deg, #0d1d3b, #163cc4);
+    linear-gradient(135deg, #151515, #24463f);
   box-shadow: var(--shadow);
 }
 
