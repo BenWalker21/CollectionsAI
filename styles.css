@@ -246,6 +246,8 @@ h3 {
 .dashboard-card,
 .feature-card,
 .workflow-card,
+.pipeline-step,
+.pipeline-demo,
 .email-panel,
 .promise-card,
 .analytics-card {
@@ -405,6 +407,123 @@ h3 {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.pipeline-section {
+  padding-top: 98px;
+}
+
+.pipeline-steps {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+}
+
+.pipeline-steps::before {
+  position: absolute;
+  top: 37px;
+  right: 7%;
+  left: 7%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(36, 87, 255, 0.18), rgba(18, 183, 216, 0.34));
+  content: "";
+}
+
+.pipeline-step {
+  position: relative;
+  display: grid;
+  min-height: 260px;
+  align-content: start;
+  border-radius: var(--radius-md);
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.pipeline-step span {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  margin-bottom: 58px;
+  border-radius: 999px;
+  color: #ffffff;
+  background: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 900;
+  box-shadow: 0 0 0 8px rgba(245, 247, 251, 0.96);
+}
+
+.pipeline-step h3 {
+  margin-bottom: 8px;
+}
+
+.pipeline-step p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.pipeline-step.active {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--blue), #0f2f9b);
+  transform: translateY(-8px);
+}
+
+.pipeline-step.active span {
+  color: var(--blue);
+  background: #ffffff;
+}
+
+.pipeline-step.active p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.pipeline-demo {
+  display: grid;
+  grid-template-columns: 0.92fr 1.08fr;
+  align-items: center;
+  gap: 22px;
+  margin-top: 16px;
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(18, 183, 216, 0.16), transparent 18rem),
+    rgba(255, 255, 255, 0.9);
+}
+
+.pipeline-demo h3 {
+  margin-bottom: 8px;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  letter-spacing: -0.05em;
+}
+
+.pipeline-demo p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.pipeline-output {
+  border: 1px solid rgba(36, 87, 255, 0.16);
+  border-radius: 22px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.pipeline-output span {
+  display: inline-flex;
+  margin-bottom: 12px;
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pipeline-output strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1.15rem;
 }
 
 .split-section,
@@ -694,9 +813,22 @@ h3 {
   }
 
   .metrics-bar,
+  .pipeline-steps,
   .workflow-grid,
   .analytics-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pipeline-steps::before {
+    display: none;
+  }
+
+  .pipeline-step.active {
+    transform: none;
+  }
+
+  .pipeline-demo {
+    grid-template-columns: 1fr;
   }
 
   .analytics-card.large {
@@ -729,6 +861,8 @@ h3 {
 
   .hero-dashboard,
   .feature-card,
+  .pipeline-step,
+  .pipeline-demo,
   .workflow-card,
   .promise-card,
   .analytics-card,
@@ -739,6 +873,7 @@ h3 {
   .one-click,
   .metrics-bar,
   .feature-grid,
+  .pipeline-steps,
   .workflow-grid,
   .analytics-grid {
     grid-template-columns: 1fr;
@@ -753,6 +888,7 @@ h3 {
   .split-section,
   .personalization-section,
   .promise-section,
+  .pipeline-section,
   .workflow-section,
   .analytics-section {
     padding-top: 68px;
