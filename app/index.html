@@ -1,275 +1,728 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CollectionsAI Demo | Smart Collections Queue</title>
-    <link rel="stylesheet" href="/app/app.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CollectionsAI | AR Follow-Up Workspace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+      :root { --royal: #1a3fa8; --gold: #c9a227; }
+      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      .badge { display: inline-block; border-radius: 9999px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+    </style>
   </head>
-  <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <a class="brand" href="/" aria-label="CollectionsAI homepage">
-          <span>CA</span>
-          CollectionsAI
-        </a>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
 
-        <nav class="sidebar-nav" aria-label="Website demo navigation">
-          <a href="#upload">Upload AR</a>
-          <a class="active" href="#queue">Queue</a>
-          <a href="#recovered">Recovered</a>
-          <a href="#email">Email</a>
-          <a href="#draft">Draft</a>
-          <a href="#promises">Promises</a>
-          <a href="#sender">Sender</a>
-          <a href="#setup">Setup</a>
-        </nav>
+    <script type="text/babel">
+      const { useEffect, useMemo, useState } = React;
 
-        <div class="sidebar-note">
-          <strong>MVP mode</strong>
-          <p>Website demo mode. Paid users can link Gmail or Outlook for drafts.</p>
-        </div>
-      </aside>
+      const store = {
+        get(key, fallback) {
+          try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+          } catch {
+            return fallback;
+          }
+        },
+        set(key, value) {
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+          } catch {}
+        },
+      };
 
-      <main class="workspace">
-        <header class="workspace-header">
-          <div>
-            <p class="eyebrow">Website demo</p>
-            <h1>Upload AR aging. Generate email drafts.</h1>
+      const DEFAULT_SETTINGS = {
+        senderName: "",
+        senderTitle: "",
+        senderCompany: "",
+        senderEmail: "",
+        senderPhone: "",
+        paymentInstructions: "Pay online at {payment_link}, or reply to arrange ACH/check.",
+      };
+
+      const FIELD_KEYWORDS = {
+        company: ["customer", "company", "client", "account", "name", "payer"],
+        contact: ["contact", "attention", "attn", "contact name"],
+        email: ["email", "e-mail", "mail", "billing email", "ap email"],
+        paymentLink: ["payment link", "pay link", "invoice link", "payment url", "invoice url"],
+        invoiceNo: ["invoice number", "invoice no", "invoice #", "invoice", "inv #", "inv no", "doc number", "number", "num"],
+        amount: ["open balance", "balance", "amount due", "amount", "open", "total"],
+        dueDate: ["due date", "date due", "duedate", "due"],
+        daysPast: ["days past due", "days overdue", "days", "aging", "past due", "overdue", "age"],
+      };
+
+      function detectColumn(headers, field) {
+        const lower = headers.map((header) => String(header || "").toLowerCase().trim());
+        for (const keyword of FIELD_KEYWORDS[field]) {
+          const index = lower.findIndex((header) => header === keyword);
+          if (index >= 0) return headers[index];
+        }
+        for (const keyword of FIELD_KEYWORDS[field]) {
+          const index = lower.findIndex((header) => header.includes(keyword));
+          if (index >= 0) return headers[index];
+        }
+        return "";
+      }
+
+      function normalizeHeader(value) {
+        return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      }
+
+      function parseNumber(value) {
+        if (value == null) return 0;
+        const text = String(value).trim();
+        if (!text || text === "-") return 0;
+        if (text.startsWith("(") && text.endsWith(")")) {
+          const negative = Number(text.slice(1, -1).replace(/[^0-9.]/g, ""));
+          return Number.isFinite(negative) ? -negative : 0;
+        }
+        const number = Number(text.replace(/[^0-9.-]/g, ""));
+        return Number.isFinite(number) ? number : 0;
+      }
+
+      function parseDate(value) {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+
+      function daysBetween(a, b) {
+        return Math.floor((a - b) / 86400000);
+      }
+
+      function fmtMoney(value) {
+        return "$" + (value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function fmtDate(value) {
+        return value ? new Date(value).toLocaleDateString() : "";
+      }
+
+      function todayDate() {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }
+
+      function tierFromDays(days) {
+        return days > 90 ? 4 : days > 60 ? 3 : days > 30 ? 2 : 1;
+      }
+
+      function tierFromAttempts(attempts) {
+        return attempts >= 3 ? 4 : attempts === 2 ? 3 : attempts === 1 ? 2 : 1;
+      }
+
+      function suggestedTier(invoice) {
+        return Math.max(tierFromDays(invoice.daysPastDue || 0), tierFromAttempts(invoice.emailsSent || 0));
+      }
+
+      function priorityScore(invoice, maxBalance) {
+        const amountNorm = maxBalance > 0 ? invoice.currentBalance / maxBalance : 0;
+        const daysNorm = Math.min((invoice.daysPastDue || 0) / 90, 1);
+        const attemptNorm = Math.min((invoice.emailsSent || 0) / 3, 1);
+        return 0.5 * amountNorm + 0.3 * daysNorm + 0.2 * attemptNorm;
+      }
+
+      const TIER_META = {
+        1: { name: "Friendly Reminder", color: "bg-emerald-100 text-emerald-800" },
+        2: { name: "Past Due Notice", color: "bg-amber-100 text-amber-800" },
+        3: { name: "Urgent Notice", color: "bg-orange-100 text-orange-800" },
+        4: { name: "Final Notice", color: "bg-red-100 text-red-800" },
+      };
+
+      function paymentInstructions(invoice, settings) {
+        if (invoice.paymentLink) {
+          return (settings.paymentInstructions || DEFAULT_SETTINGS.paymentInstructions)
+            .replaceAll("{payment_link}", invoice.paymentLink)
+            .replaceAll("[your payment link]", invoice.paymentLink);
+        }
+        return "If helpful, I can resend the payment link.";
+      }
+
+      function buildEmail(tier, invoice, settings) {
+        const contact = invoice.contact || invoice.company || "there";
+        const senderName = settings.senderName || "[Your name]";
+        const senderCompany = settings.senderCompany || "[Your company]";
+        const sig = [
+          senderName,
+          [settings.senderTitle, senderCompany].filter(Boolean).join(", "),
+          [settings.senderEmail, settings.senderPhone].filter(Boolean).join(" · "),
+        ].filter(Boolean).join("\n");
+        const pay = paymentInstructions(invoice, settings);
+        const invoiceNo = invoice.invoiceNo || invoice.id || "";
+        const amount = fmtMoney(invoice.currentBalance);
+        const dueDate = fmtDate(invoice.dueDate);
+        const days = invoice.daysPastDue || 0;
+
+        const templates = {
+          1: {
+            subject: `Friendly reminder: Invoice ${invoiceNo}`,
+            body: `Hi ${contact},\n\nI hope you're doing well. This is a quick reminder that invoice ${invoiceNo} for ${amount} appears to still be open on our end.${dueDate ? ` It was due on ${dueDate}.` : ""}\n\nPayment details:\n${pay}\n\nIf it's already on its way, please disregard this note. Otherwise, can you confirm payment timing when you have a moment?\n\nThanks so much,\n${sig}`,
+          },
+          2: {
+            subject: `Past due: Invoice ${invoiceNo} (${days} days)`,
+            body: `Hi ${contact},\n\nI'm following up on invoice ${invoiceNo} for ${amount}, which is now ${days} days past due${dueDate ? ` (originally due ${dueDate})` : ""}.\n\nCould you please arrange payment at your earliest convenience?\n${pay}\n\nIf there's a problem with the invoice or you need to discuss timing, reply here and I'll help get it sorted out.\n\nBest regards,\n${sig}`,
+          },
+          3: {
+            subject: `Urgent: Invoice ${invoiceNo} requires your attention`,
+            body: `Hi ${contact},\n\nDespite previous reminders, invoice ${invoiceNo} for ${amount} remains unpaid and is now ${days} days past due.\n\nI'm requesting payment within 5 business days. Payment details:\n${pay}\n\nIf payment has been sent, please reply with the date and method so we can reconcile it. If something is preventing payment, please reply today so we can find a resolution.\n\nRegards,\n${sig}`,
+          },
+          4: {
+            subject: `Final notice: Invoice ${invoiceNo} — ${amount} past due`,
+            body: `${contact}\n${invoice.company || ""}\n\nRe: Invoice ${invoiceNo} — Final Notice\n\nThis is a final notice regarding invoice ${invoiceNo} for ${amount}, which is ${days} days past due and remains unpaid despite previous attempts to reach you.\n\nTo resolve this, we ask that payment in full be received within 7 days.\n${pay}\n\nIf you've already made this payment, please reply right away with the details so we can update our records.\n\n${sig}`,
+          },
+        };
+
+        return templates[tier];
+      }
+
+      function downloadEml(to, subject, body) {
+        const eml = `To: ${to || ""}\r\nSubject: ${subject}\r\nX-Unsent: 1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`;
+        const blob = new Blob([eml], { type: "message/rfc822" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${(subject || "collection_email").replace(/[^a-z0-9]+/gi, "_").slice(0, 48)}.eml`;
+        link.click();
+      }
+
+      function csvEscape(value) {
+        return `"${String(value ?? "").replaceAll('"', '""')}"`;
+      }
+
+      function downloadCsv(filename, rows) {
+        const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+      }
+
+      function findAgingHeaderRow(matrix) {
+        return matrix.findIndex((row) => {
+          const headers = row.map(normalizeHeader);
+          const hasTotal = headers.some((header) => ["total", "balance", "openbalance", "amountdue"].some((key) => header.includes(key)));
+          const hasCurrent = headers.some((header) => header === "current");
+          const hasBucket = headers.some((header) => /91|90plus|over90|olderthan90|61|60to90|6190|31|30to60|3160|1.*30|130/.test(header));
+          return hasTotal && (hasCurrent || hasBucket);
+        });
+      }
+
+      function findHeader(headers, candidates) {
+        return headers.findIndex((header) => candidates.some((candidate) => header.includes(candidate)));
+      }
+
+      function findAgingBuckets(headers) {
+        return headers.map((header, index) => {
+          if (/91|90plus|over90|olderthan90/.test(header)) return { index, days: 91 };
+          if (/61|60to90|6190/.test(header)) return { index, days: 61 };
+          if (/31|30to60|3160/.test(header)) return { index, days: 31 };
+          if (/1.*30|130|pastdue|overdue/.test(header) && header !== "current") return { index, days: 15 };
+          return null;
+        }).filter(Boolean);
+      }
+
+      function parseQboTotalCustomer(value = "") {
+        const match = String(value).trim().match(/^total\s+for\s+(.+)$/i);
+        return match ? match[1].trim() : "";
+      }
+
+      function customerKey(customer) {
+        return String(customer || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      }
+
+      function parseQboMatrix(matrix) {
+        const headerRowIndex = findAgingHeaderRow(matrix);
+        if (headerRowIndex === -1) return null;
+        const headers = matrix[headerRowIndex].map(normalizeHeader);
+        const customerIndex = 0;
+        const totalIndex = findHeader(headers, ["total", "balance", "openbalance", "amountdue"]);
+        const currentIndex = findHeader(headers, ["current"]);
+        const bucketIndexes = findAgingBuckets(headers);
+        const dataRows = matrix.slice(headerRowIndex + 1);
+        const totalCustomerKeys = new Set(dataRows.map((row) => parseQboTotalCustomer(row[customerIndex])).filter(Boolean).map(customerKey));
+        const invoices = [];
+        let currentGroup = "";
+
+        dataRows.forEach((row, index) => {
+          const rawCustomer = String(row[customerIndex] || "").trim();
+          if (!rawCustomer || /^total$/i.test(rawCustomer)) return;
+          const totalCustomer = parseQboTotalCustomer(rawCustomer);
+          const rowHasAmount = parseNumber(row[totalIndex]) > 0 || parseNumber(row[currentIndex]) > 0 || bucketIndexes.some((bucket) => parseNumber(row[bucket.index]) > 0);
+
+          if (totalCustomer) {
+            const parsed = matrixRowToInvoice(row, index, totalCustomer, totalIndex, currentIndex, bucketIndexes);
+            if (parsed) invoices.push(parsed);
+            currentGroup = "";
+            return;
+          }
+
+          if (!rowHasAmount) {
+            currentGroup = rawCustomer;
+            return;
+          }
+
+          if (currentGroup && totalCustomerKeys.has(customerKey(currentGroup))) return;
+          const parsed = matrixRowToInvoice(row, index, currentGroup || rawCustomer, totalIndex, currentIndex, bucketIndexes);
+          if (parsed) invoices.push(parsed);
+        });
+
+        return invoices.sort((a, b) => b.currentBalance - a.currentBalance);
+      }
+
+      function matrixRowToInvoice(row, index, customer, totalIndex, currentIndex, bucketIndexes) {
+        const current = currentIndex === -1 ? 0 : parseNumber(row[currentIndex]);
+        const bucketValues = bucketIndexes.map((bucket) => ({ days: bucket.days, amount: parseNumber(row[bucket.index]) }));
+        const overdue = bucketValues.reduce((sum, bucket) => sum + bucket.amount, 0);
+        const total = totalIndex === -1 ? overdue + current : parseNumber(row[totalIndex]);
+        const amount = overdue > 0 ? overdue : Math.max(total - current, 0);
+        if (!customer || /^total$/i.test(customer) || amount <= 0) return null;
+        const oldestBucket = bucketValues.filter((bucket) => bucket.amount > 0).sort((a, b) => b.days - a.days)[0];
+        const daysPastDue = oldestBucket?.days || 15;
+
+        return {
+          id: `qbo_${index}_${customerKey(customer)}`,
+          company: customer,
+          contact: "Accounts Payable",
+          email: "",
+          paymentLink: "",
+          invoiceNo: `QBO-${String(index + 1).padStart(4, "0")}`,
+          currentBalance: amount,
+          dueDate: null,
+          daysPastDue,
+          status: "open",
+          emailsSent: 0,
+          promisedUntil: null,
+          interactions: [],
+        };
+      }
+
+      function parseGenericRows(headers, rows, map) {
+        const today = todayDate();
+        return rows.map((row, index) => {
+          const due = parseDate(row[map.dueDate]);
+          let daysPastDue = map.daysPast && row[map.daysPast] !== "" ? parseInt(parseNumber(row[map.daysPast]), 10) : null;
+          if (daysPastDue == null || Number.isNaN(daysPastDue)) daysPastDue = due ? daysBetween(today, due) : 0;
+          const currentBalance = parseNumber(row[map.amount]);
+          const company = String(row[map.company] || "").trim();
+          if (!company && !currentBalance) return null;
+          return {
+            id: `inv_${index}_${Date.now()}`,
+            company,
+            contact: String(row[map.contact] || "Accounts Payable").trim(),
+            email: String(row[map.email] || "").trim(),
+            paymentLink: String(row[map.paymentLink] || "").trim(),
+            invoiceNo: String(row[map.invoiceNo] || `INV-${index + 1}`).trim(),
+            currentBalance,
+            dueDate: due ? due.toISOString() : null,
+            daysPastDue,
+            status: "open",
+            emailsSent: 0,
+            promisedUntil: null,
+            interactions: [],
+          };
+        }).filter(Boolean);
+      }
+
+      function App() {
+        const [tab, setTab] = useState("worklist");
+        const [settings, setSettings] = useState(() => store.get("arw_settings", DEFAULT_SETTINGS));
+        const [invoices, setInvoices] = useState(() => store.get("arw_invoices", []));
+        const [mapping, setMapping] = useState(null);
+        const [selected, setSelected] = useState(null);
+
+        useEffect(() => store.set("arw_settings", settings), [settings]);
+        useEffect(() => store.set("arw_invoices", invoices), [invoices]);
+
+        const setupDone = settings.senderName && settings.senderCompany;
+        const maxBalance = Math.max(1, ...invoices.map((invoice) => invoice.currentBalance || 0));
+        const active = invoices.filter((invoice) => !["paid", "skip"].includes(invoice.status));
+        const sorted = [...active].map((invoice) => ({
+          ...invoice,
+          _priority: priorityScore(invoice, maxBalance),
+          _tier: suggestedTier(invoice),
+        })).sort((a, b) => b._priority - a._priority);
+        const totalAR = invoices.filter((invoice) => invoice.status !== "paid").reduce((sum, invoice) => sum + invoice.currentBalance, 0);
+        const pastDueAR = invoices.filter((invoice) => invoice.status !== "paid" && invoice.daysPastDue > 0).reduce((sum, invoice) => sum + invoice.currentBalance, 0);
+        const promisedAR = invoices.filter((invoice) => invoice.status === "promised").reduce((sum, invoice) => sum + invoice.currentBalance, 0);
+        const avgAge = active.length
+          ? Math.round(active.reduce((sum, invoice) => sum + invoice.currentBalance * invoice.daysPastDue, 0) / Math.max(1, active.reduce((sum, invoice) => sum + invoice.currentBalance, 0)))
+          : 0;
+
+        function startMapping(headers, rows) {
+          const map = {};
+          Object.keys(FIELD_KEYWORDS).forEach((field) => {
+            map[field] = detectColumn(headers, field);
+          });
+          setMapping({ headers, rows, map });
+        }
+
+        function handleFile(file) {
+          const extension = file.name.split(".").pop().toLowerCase();
+          if (extension === "csv") {
+            file.text().then((text) => {
+              const matrix = Papa.parse(text, { skipEmptyLines: false }).data;
+              const qboInvoices = parseQboMatrix(matrix);
+              if (qboInvoices && qboInvoices.length) {
+                setInvoices(qboInvoices);
+                setTab("worklist");
+                return;
+              }
+              Papa.parse(text, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (result) => startMapping(result.meta.fields || [], result.data),
+              });
+            });
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const workbook = XLSX.read(event.target.result, { type: "array", cellDates: true });
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+            startMapping(rows.length ? Object.keys(rows[0]) : [], rows);
+          };
+          reader.readAsArrayBuffer(file);
+        }
+
+        function confirmImport() {
+          setInvoices(parseGenericRows(mapping.headers, mapping.rows, mapping.map));
+          setMapping(null);
+          setTab("worklist");
+        }
+
+        function update(id, patch) {
+          setInvoices((previous) => previous.map((invoice) => invoice.id === id ? { ...invoice, ...patch } : invoice));
+        }
+
+        function addInteraction(id, kind, text, tier = null) {
+          setInvoices((previous) => previous.map((invoice) => invoice.id === id
+            ? { ...invoice, interactions: [...(invoice.interactions || []), { kind, text, tier, at: new Date().toISOString() }] }
+            : invoice));
+        }
+
+        function markSent(id, tier) {
+          const invoice = invoices.find((item) => item.id === id);
+          update(id, { emailsSent: (invoice.emailsSent || 0) + 1, lastEmailedAt: new Date().toISOString() });
+          addInteraction(id, "emailed", `Tier ${tier} email sent`, tier);
+        }
+
+        function clearAll() {
+          if (confirm("Clear all invoices? Sender settings will be kept.")) setInvoices([]);
+        }
+
+        return (
+          <div className="max-w-6xl mx-auto p-4 md:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h1 className="text-xl font-bold" style={{ color: "var(--royal)" }}>AR Follow-Up Workspace</h1>
+                <p className="text-xs text-slate-500">Upload aging → prioritized queue → draft → send. Recover one invoice faster and it pays for itself.</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => setTab("worklist")} className={`px-3 py-1.5 rounded text-sm font-medium ${tab === "worklist" ? "text-white" : "bg-white border"}`} style={tab === "worklist" ? { background: "var(--royal)" } : {}}>Worklist</button>
+                <button onClick={() => setTab("settings")} className={`px-3 py-1.5 rounded text-sm font-medium ${tab === "settings" ? "text-white" : "bg-white border"}`} style={tab === "settings" ? { background: "var(--royal)" } : {}}>Settings</button>
+                <a href="/" className="px-3 py-1.5 rounded text-sm font-medium bg-white border">Website</a>
+              </div>
+            </div>
+
+            {!setupDone && (
+              <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                Fill in sender details in <b>Settings</b> first — they sign every email.
+              </div>
+            )}
+
+            {tab === "settings" && <Settings settings={settings} setSettings={setSettings} />}
+
+            {tab === "worklist" && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                  <Metric label="Total AR" value={fmtMoney(totalAR)} />
+                  <Metric label="Past-due AR" value={fmtMoney(pastDueAR)} />
+                  <Metric label="Avg age (days)" value={avgAge} hint="weighted; not DSO" />
+                  <Metric label="Promised" value={fmtMoney(promisedAR)} accent />
+                  <Metric label="Need action" value={sorted.length} />
+                </div>
+
+                <Upload onFile={handleFile} hasData={invoices.length > 0} onClear={clearAll} />
+                {mapping && <MappingPanel mapping={mapping} setMapping={setMapping} onConfirm={confirmImport} />}
+
+                {sorted.length === 0 ? (
+                  <div className="mt-6 rounded-lg border-2 border-dashed py-10 text-center text-sm text-slate-400">
+                    No invoices to work. Upload a QBO AR Aging Summary or generic aging report above.
+                  </div>
+                ) : (
+                  <Worklist invoices={sorted} setSelected={setSelected} update={update} addInteraction={addInteraction} />
+                )}
+              </>
+            )}
+
+            {selected && (
+              <DraftModal
+                invoice={invoices.find((invoice) => invoice.id === selected)}
+                settings={settings}
+                onClose={() => setSelected(null)}
+                onSent={(tier) => markSent(selected, tier)}
+                update={update}
+                addInteraction={addInteraction}
+              />
+            )}
+
+            <p className="text-center text-xs text-slate-400 mt-6">Demo data is saved in this browser only. Uploads are processed locally in the browser.</p>
           </div>
-          <a class="secondary-action" href="/">View marketing site</a>
-        </header>
+        );
+      }
 
-        <section id="upload" class="upload-panel">
-          <div>
-            <p class="eyebrow">See it in action</p>
-            <h2>Drag and drop an AR aging summary</h2>
-            <p>
-              Upload your actual QuickBooks AR Aging Summary CSV here. For this
-              demo, the file is processed in your browser and is not stored on a server.
-            </p>
+      function Metric({ label, value, hint, accent }) {
+        return (
+          <div className="bg-white rounded-lg border p-3">
+            <div className="text-xs text-slate-500">{label}</div>
+            <div className="text-lg font-bold" style={accent ? { color: "var(--gold)" } : { color: "var(--royal)" }}>{value}</div>
+            {hint && <div className="text-[10px] text-slate-400">{hint}</div>}
           </div>
-          <label class="drop-zone" id="dropZone" for="agingFileInput">
-            <input id="agingFileInput" type="file" accept=".csv,text/csv" />
-            <span>Upload your AR CSV</span>
-            <small>Supports QBO Aging Summary exports. Email and Payment Link are optional but needed for send-ready drafts.</small>
-          </label>
-          <div class="upload-actions">
-            <button class="sample-button" id="sampleUploadButton" type="button">
-              Use sample
-            </button>
-            <button class="sample-button secondary-sample" id="sampleFollowupButton" type="button">
-              Compare next sample
-            </button>
-            <button class="sample-button secondary-sample" id="templateButton" type="button">
+        );
+      }
+
+      function Upload({ onFile, hasData, onClear }) {
+        return (
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--royal)" }}>
+              {hasData ? "Upload new aging report" : "Upload AR aging (.csv / .xlsx)"}
+              <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(event) => event.target.files[0] && onFile(event.target.files[0])} />
+            </label>
+            <button
+              onClick={() => downloadCsv("collectionsai-ar-template.csv", [["Customer", "Email", "Payment Link", "Current", "1 - 30", "31 - 60", "61 - 90", "91 and over", "Total"], ["Example Customer", "ap@example.com", "https://pay.example.com/invoice-1001", "0", "1000", "0", "0", "0", "1000"]])}
+              className="rounded-lg border bg-white px-4 py-2 text-sm font-medium"
+            >
               Download CSV template
             </button>
+            <button
+              onClick={() => onFile(new File([sampleCsv()], "sample-aging.csv", { type: "text/csv" }))}
+              className="rounded-lg border bg-white px-4 py-2 text-sm font-medium"
+            >
+              Use sample
+            </button>
+            {hasData && <button onClick={onClear} className="text-sm text-slate-500 underline">Clear all</button>}
           </div>
-        </section>
+        );
+      }
 
-        <section class="demo-guide panel" aria-label="Demo walkthrough">
-          <article>
-            <span>1</span>
-            <p>Upload your CSV or click <strong>Use sample</strong>.</p>
-          </article>
-          <article>
-            <span>2</span>
-            <p>Select a customer in the queue.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <p>Open the email draft or download the campaign CSV.</p>
-          </article>
-        </section>
+      function sampleCsv() {
+        return [
+          "Customer,Email,Payment Link,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
+          "Acme Supply,ap@acmesupply.example,https://pay.collectionsai.example/acme-1042,1200,22400,0,0,0,23600",
+          "Beta Logistics,finance@betalogistics.example,https://pay.collectionsai.example/beta-1088,0,0,18000,0,0,18000",
+          "Delta Foods,ap@deltafoods.example,https://pay.collectionsai.example/delta-1104,0,0,0,0,12700,12700",
+        ].join("\n");
+      }
 
-        <section id="setup" class="connection-grid" aria-label="Connection status">
-          <article class="connection-card" data-provider="qbo">
-            <div>
-              <span class="source-icon">QB</span>
-              <h2>QuickBooks Online</h2>
-              <p>Paid users can pull customer emails, invoice balances, and payment links from QBO.</p>
+      function MappingPanel({ mapping, setMapping, onConfirm }) {
+        const fields = [
+          ["company", "Customer / Company *"],
+          ["contact", "Contact name"],
+          ["email", "Email"],
+          ["paymentLink", "Payment link"],
+          ["invoiceNo", "Invoice number"],
+          ["amount", "Balance / Amount *"],
+          ["dueDate", "Due date"],
+          ["daysPast", "Days past due"],
+        ];
+        return (
+          <div className="mt-4 rounded-lg border bg-white p-4">
+            <div className="font-semibold text-sm mb-1">Confirm columns</div>
+            <p className="text-xs text-slate-500 mb-3">We auto-matched your columns. Fix any that look wrong, then import. ({mapping.rows.length} rows)</p>
+            <div className="grid md:grid-cols-2 gap-3">
+              {fields.map(([key, label]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <label className="text-xs w-40 text-slate-600">{label}</label>
+                  <select value={mapping.map[key] || ""} onChange={(event) => setMapping({ ...mapping, map: { ...mapping.map, [key]: event.target.value } })} className="flex-1 rounded border px-2 py-1 text-sm">
+                    <option value="">— none —</option>
+                    {mapping.headers.map((header) => <option key={header} value={header}>{header}</option>)}
+                  </select>
+                </div>
+              ))}
             </div>
-            <a class="connect-button" href="/api/qbo/connect">Connect QuickBooks</a>
-            <span class="connection-status">Checking...</span>
-          </article>
-
-          <article class="connection-card" data-provider="gmail">
-            <div>
-              <span class="source-icon">GM</span>
-              <h2>Gmail</h2>
-              <p>Paid users connect Gmail to create drafts inside their inbox.</p>
+            <div className="flex gap-2 mt-4">
+              <button onClick={onConfirm} className="rounded px-4 py-2 text-sm font-medium text-white" style={{ background: "var(--royal)" }}>Import {mapping.rows.length} invoices</button>
+              <button onClick={() => setMapping(null)} className="rounded border px-4 py-2 text-sm">Cancel</button>
             </div>
-            <a class="connect-button" href="/api/gmail/connect">Connect Gmail</a>
-            <span class="connection-status">Checking...</span>
-          </article>
-
-          <article class="connection-card" data-provider="outlook">
-            <div>
-              <span class="source-icon">OL</span>
-              <h2>Outlook</h2>
-              <p>Paid users connect Outlook to create drafts inside Microsoft 365.</p>
-            </div>
-            <a class="connect-button" href="/api/outlook/connect">Connect Outlook</a>
-            <span class="connection-status">Checking...</span>
-          </article>
-        </section>
-
-        <section class="setup-alert hidden" id="setupAlert" aria-live="polite">
-          <div>
-            <strong id="setupTitle">Credentials needed</strong>
-            <p id="setupMessage"></p>
           </div>
-          <a href="/docs/setup.md">See setup guide</a>
-        </section>
+        );
+      }
 
-        <section id="sender" class="panel settings-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Sender settings</p>
-              <h2>Who the collection emails come from</h2>
-            </div>
-            <span class="draft-tone" id="settingsStatus">Saved in browser</span>
+      function Worklist({ invoices, setSelected, update, addInteraction }) {
+        return (
+          <div className="mt-4 overflow-hidden rounded-lg border bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-2">Priority</th>
+                  <th className="p-2">Customer</th>
+                  <th className="p-2">Invoice #</th>
+                  <th className="p-2 text-right">Balance</th>
+                  <th className="p-2 text-right">Days</th>
+                  <th className="p-2">Tier</th>
+                  <th className="p-2">Sent</th>
+                  <th className="p-2">Status</th>
+                  <th className="p-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((invoice) => {
+                  const priority = invoice._priority >= 0.66 ? ["High", "bg-red-100 text-red-800"] : invoice._priority >= 0.33 ? ["Med", "bg-amber-100 text-amber-800"] : ["Low", "bg-slate-100 text-slate-700"];
+                  return (
+                    <tr key={invoice.id} className="border-t hover:bg-slate-50">
+                      <td className="p-2"><span className={`badge ${priority[1]}`}>{priority[0]}</span></td>
+                      <td className="p-2 font-medium">{invoice.company}<div className="text-xs font-normal text-slate-400">{invoice.email || "Email needed"} · {invoice.paymentLink ? "Payment link ready" : "Payment link needed"}</div></td>
+                      <td className="p-2 text-slate-600">{invoice.invoiceNo}</td>
+                      <td className="p-2 text-right">{fmtMoney(invoice.currentBalance)}</td>
+                      <td className="p-2 text-right">{invoice.daysPastDue}</td>
+                      <td className="p-2"><span className={`badge ${TIER_META[invoice._tier].color}`}>{TIER_META[invoice._tier].name}</span></td>
+                      <td className="p-2 text-center">{invoice.emailsSent || 0}</td>
+                      <td className="p-2"><StatusPill invoice={invoice} update={update} addInteraction={addInteraction} /></td>
+                      <td className="p-2 text-right"><button onClick={() => setSelected(invoice.id)} className="rounded px-2.5 py-1 text-xs text-white" style={{ background: "var(--gold)" }}>Draft</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div class="settings-grid">
-            <label>
-              <span>Your name</span>
-              <input id="senderNameInput" type="text" placeholder="Your name" />
-            </label>
-            <label>
-              <span>Company</span>
-              <input id="senderCompanyInput" type="text" placeholder="Your company" />
-            </label>
-            <label>
-              <span>Reply-to email</span>
-              <input id="senderEmailInput" type="email" placeholder="you@company.com" />
-            </label>
-            <label>
-              <span>Phone</span>
-              <input id="senderPhoneInput" type="tel" placeholder="(555) 123-4567" />
-            </label>
-            <label class="settings-wide">
-              <span>Payment instructions</span>
-              <textarea id="paymentInstructionsInput" rows="3"></textarea>
-            </label>
-          </div>
-        </section>
+        );
+      }
 
-        <section class="metrics-row" aria-label="Collections metrics">
-          <article>
-            <span id="queuedMetric">$53,100</span>
-            <p>Queued for outreach</p>
-          </article>
-          <article>
-            <span id="recoveredMetric">$0</span>
-            <p>Recovered since last upload</p>
-          </article>
-          <article>
-            <span id="followupMetric">3</span>
-            <p>Email drafts ready</p>
-          </article>
-          <article>
-            <span id="riskMetric">2</span>
-            <p>Customers at risk</p>
-          </article>
-        </section>
+      function StatusPill({ invoice, update, addInteraction }) {
+        function setStatus(event) {
+          const status = event.target.value;
+          if (status === "promised") {
+            const promisedDate = prompt("Promised to pay by (e.g. 2026-06-20):", "");
+            update(invoice.id, { status: "promised", promisedUntil: promisedDate || null });
+            addInteraction(invoice.id, "promised", `Promised by ${promisedDate || "unknown date"}`);
+            return;
+          }
+          update(invoice.id, { status });
+          if (status === "paid") addInteraction(invoice.id, "reconciled", "Marked paid");
+        }
 
-        <section id="recovered" class="panel recovery-panel hidden">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Aging comparison</p>
-              <h2>What changed since the last upload</h2>
-            </div>
-            <span class="draft-tone" id="comparisonStatus">Waiting for next upload</span>
-          </div>
-          <div class="recovery-list" id="recoveryList"></div>
-        </section>
+        return (
+          <select value={invoice.status} onChange={setStatus} className="rounded border bg-white px-1.5 py-0.5 text-xs">
+            <option value="open">Open</option>
+            <option value="promised">Promised</option>
+            <option value="disputed">Disputed</option>
+            <option value="paid">Paid</option>
+            <option value="skip">Skip</option>
+          </select>
+        );
+      }
 
-        <section id="email" class="panel email-campaign-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Email outreach</p>
-              <h2>Turn the queue into approved follow-up emails</h2>
-            </div>
-            <button id="downloadCampaignButton" type="button">Download campaign CSV</button>
-          </div>
-          <div class="email-campaign-grid">
-            <article>
-              <span id="emailReadyMetric">0</span>
-              <p>customers have email addresses</p>
-            </article>
-            <article>
-              <span id="emailMissingMetric">0</span>
-              <p>customers need email addresses</p>
-            </article>
-            <article>
-              <span>Approve first</span>
-              <p>drafts are created for review; users send them</p>
-            </article>
-          </div>
-        </section>
+      function DraftModal({ invoice, settings, onClose, onSent, update, addInteraction }) {
+        const [tier, setTier] = useState(suggestedTier(invoice));
+        const base = useMemo(() => buildEmail(tier, invoice, settings), [tier, invoice, settings]);
+        const [subject, setSubject] = useState(base.subject);
+        const [body, setBody] = useState(base.body);
+        const [note, setNote] = useState("");
 
-        <div class="content-grid">
-          <section id="queue" class="panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">AI ranked</p>
-                <h2>Overdue invoice queue</h2>
+        useEffect(() => {
+          setSubject(base.subject);
+          setBody(base.body);
+        }, [base.subject, base.body]);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-black/40 p-4" onClick={onClose}>
+            <div className="mt-6 w-full max-w-2xl rounded-lg bg-white p-5" onClick={(event) => event.stopPropagation()}>
+              <div className="mb-3 flex items-start justify-between">
+                <div>
+                  <div className="font-bold">{invoice.company}</div>
+                  <div className="text-xs text-slate-500">Invoice {invoice.invoiceNo} · {fmtMoney(invoice.currentBalance)} · {invoice.daysPastDue} days past due</div>
+                </div>
+                <button onClick={onClose} className="text-xl leading-none text-slate-400">×</button>
               </div>
-              <button id="sendAllButton" type="button">Prepare email drafts</button>
-            </div>
-            <div class="invoice-list" id="invoiceList"></div>
-          </section>
 
-          <section id="draft" class="panel draft-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">AI draft</p>
-                <h2 id="draftTitle">Select an invoice</h2>
+              {!invoice.email && <div className="mb-3 rounded border bg-slate-50 p-2 text-xs text-slate-600">No email on file — add one to the source file, or copy/download the draft and send manually.</div>}
+              {!invoice.paymentLink && <div className="mb-3 rounded border bg-amber-50 p-2 text-xs text-amber-800">No payment link on file — the draft asks the customer to reply if they need it resent.</div>}
+
+              <div className="mb-3 flex flex-wrap gap-1">
+                {[1, 2, 3, 4].map((item) => (
+                  <button key={item} onClick={() => setTier(item)} className={`rounded border px-2 py-1 text-xs ${tier === item ? "text-white" : ""}`} style={tier === item ? { background: "var(--royal)", borderColor: "var(--royal)" } : {}}>
+                    T{item} {TIER_META[item].name.split(" ")[0]}
+                  </button>
+                ))}
               </div>
-              <span class="draft-tone" id="draftTone">Tone</span>
-            </div>
-            <div class="draft-box">
-              <label for="draftBody">Follow-up email</label>
-              <textarea id="draftBody" rows="12"></textarea>
-            </div>
-            <div class="draft-actions">
-              <button id="copyDraftButton" type="button">Copy draft</button>
-              <button id="openEmailButton" type="button">Open email</button>
-              <button id="downloadEmlButton" type="button">Download .eml</button>
-              <button id="markSentButton" type="button">Log sent</button>
-              <button id="promiseButton" type="button">Log promise</button>
-            </div>
-          </section>
-        </div>
 
-        <section id="promises" class="panel promise-panel">
-          <div class="panel-header">
-            <div>
-              <p class="eyebrow">Promise tracking</p>
-              <h2>Commitments the AI will not forget</h2>
+              <input value={subject} onChange={(event) => setSubject(event.target.value)} className="mb-2 w-full rounded border px-2 py-1.5 text-sm font-medium" />
+              <textarea value={body} onChange={(event) => setBody(event.target.value)} rows={12} className="mb-3 w-full rounded border px-2 py-1.5 font-mono text-sm" />
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                <button onClick={() => navigator.clipboard.writeText(body)} className="rounded border px-3 py-1.5 text-sm">Copy body</button>
+                <a href={`mailto:${invoice.email || ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} className="rounded border px-3 py-1.5 text-sm">Open in mail app</a>
+                <button onClick={() => downloadEml(invoice.email, subject, body)} className="rounded border px-3 py-1.5 text-sm">Download .eml</button>
+                <button onClick={() => { onSent(tier); onClose(); }} className="ml-auto rounded px-3 py-1.5 text-sm font-medium text-white" style={{ background: "var(--gold)" }}>I sent this → log it</button>
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="mb-1 text-xs font-semibold text-slate-600">Notes & history</div>
+                <div className="mb-2 flex gap-2">
+                  <input value={note} onChange={(event) => setNote(event.target.value)} placeholder='e.g. "Controller said paying Friday"' className="flex-1 rounded border px-2 py-1 text-xs" />
+                  <button onClick={() => { if (note.trim()) { addInteraction(invoice.id, "note", note.trim()); setNote(""); } }} className="rounded border px-2 py-1 text-xs">Add</button>
+                </div>
+                <div className="max-h-28 space-y-1 overflow-auto text-xs">
+                  {[...(invoice.interactions || [])].reverse().map((item, index) => (
+                    <div key={index} className="text-slate-500"><span className="text-slate-400">{fmtDate(item.at)}</span> — {item.text || item.kind}</div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
-          <div class="promise-grid">
-            <article>
-              <strong>Beta Logistics</strong>
-              <p>Customer said they would confirm payment timing. Follow up today.</p>
-              <span>Needs confirmation</span>
-            </article>
-            <article>
-              <strong>Delta Foods</strong>
-              <p>Missed Friday commitment. Escalate with payment plan option.</p>
-              <span>Missed promise</span>
-            </article>
-            <article>
-              <strong>Northstar Retail</strong>
-              <p>Paid after second reminder. Marked recovered in analytics.</p>
-              <span>Recovered</span>
-            </article>
-          </div>
-        </section>
-      </main>
-    </div>
+        );
+      }
 
-    <script src="/app/app.js"></script>
+      function Settings({ settings, setSettings }) {
+        function field(key) {
+          return { value: settings[key] || "", onChange: (event) => setSettings({ ...settings, [key]: event.target.value }) };
+        }
+
+        function exportBackup() {
+          const data = { settings: store.get("arw_settings", {}), invoices: store.get("arw_invoices", []) };
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "collectionsai-workspace-backup.json";
+          link.click();
+        }
+
+        return (
+          <div className="max-w-xl rounded-lg border bg-white p-5">
+            <div className="mb-3 font-semibold">Sender identity</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Your name *"><input {...field("senderName")} className="w-full rounded border px-2 py-1.5 text-sm" /></Field>
+              <Field label="Title"><input {...field("senderTitle")} className="w-full rounded border px-2 py-1.5 text-sm" /></Field>
+              <Field label="Company *"><input {...field("senderCompany")} className="w-full rounded border px-2 py-1.5 text-sm" /></Field>
+              <Field label="Reply-to email"><input {...field("senderEmail")} className="w-full rounded border px-2 py-1.5 text-sm" /></Field>
+              <Field label="Phone"><input {...field("senderPhone")} className="w-full rounded border px-2 py-1.5 text-sm" /></Field>
+            </div>
+            <div className="mt-3">
+              <Field label="Payment instructions">
+                <textarea {...field("paymentInstructions")} rows={3} className="w-full rounded border px-2 py-1.5 text-sm" />
+              </Field>
+            </div>
+            <button onClick={exportBackup} className="mt-4 rounded border px-3 py-1.5 text-sm">Export backup</button>
+          </div>
+        );
+      }
+
+      function Field({ label, children }) {
+        return <label className="block"><span className="text-xs text-slate-600">{label}</span>{children}</label>;
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
   </body>
 </html>
