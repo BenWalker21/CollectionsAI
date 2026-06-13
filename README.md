@@ -25,8 +25,11 @@ It includes:
 - QuickBooks, Gmail, and Outlook connection entry points
 - Sample or uploaded overdue invoice queue
 - AI priority reasons
+- Sender settings saved in browser for email signatures and payment instructions
+- Tiered collection templates based on aging and sent count
 - Ready-to-send follow-up email drafts
 - Payment link parsing and inclusion in email drafts
+- `.eml` email download and sent-count logging
 - Campaign CSV export for email outreach
 - Promise tracking examples
 - Stripe Checkout scaffold for paid subscription access

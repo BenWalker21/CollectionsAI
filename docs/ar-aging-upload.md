@@ -68,7 +68,9 @@ If the CSV includes email addresses, CollectionsAI can immediately:
 - Generate one follow-up draft per overdue customer
 - Include the invoice payment link in each draft when available
 - Open the selected draft in the user's email client
+- Download an `.eml` draft that opens as an unsent email
 - Export all drafts as `collectionsai-email-campaign.csv`
+- Log when a follow-up is sent so future drafts can escalate tone
 
 The campaign CSV contains customer, email, payment link, subject, body, amount,
 days overdue, tone, and priority score. This is useful for Gmail, Outlook, or
@@ -82,5 +84,19 @@ AR aging upload avoids the friction of OAuth setup while still proving the core 
 - Rank the highest-impact customers
 - Draft ready-to-send follow-up emails
 - Show expected cash recovery
+
+## Sender settings
+
+The demo includes sender settings for:
+
+- sender name
+- company
+- reply-to email
+- phone
+- payment instructions
+
+These values are saved in the browser and used in generated email signatures.
+Production paid accounts should store these settings per user/team in the
+database.
 
 QuickBooks, Gmail, and Outlook connections can be added after users validate the workflow.

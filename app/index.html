@@ -21,6 +21,7 @@
           <a href="#email">Email</a>
           <a href="#draft">Draft</a>
           <a href="#promises">Promises</a>
+          <a href="#sender">Sender</a>
           <a href="#setup">Setup</a>
         </nav>
 
@@ -121,6 +122,38 @@
           <a href="/docs/setup.md">See setup guide</a>
         </section>
 
+        <section id="sender" class="panel settings-panel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Sender settings</p>
+              <h2>Who the collection emails come from</h2>
+            </div>
+            <span class="draft-tone" id="settingsStatus">Saved in browser</span>
+          </div>
+          <div class="settings-grid">
+            <label>
+              <span>Your name</span>
+              <input id="senderNameInput" type="text" placeholder="Your name" />
+            </label>
+            <label>
+              <span>Company</span>
+              <input id="senderCompanyInput" type="text" placeholder="Your company" />
+            </label>
+            <label>
+              <span>Reply-to email</span>
+              <input id="senderEmailInput" type="email" placeholder="you@company.com" />
+            </label>
+            <label>
+              <span>Phone</span>
+              <input id="senderPhoneInput" type="tel" placeholder="(555) 123-4567" />
+            </label>
+            <label class="settings-wide">
+              <span>Payment instructions</span>
+              <textarea id="paymentInstructionsInput" rows="3"></textarea>
+            </label>
+          </div>
+        </section>
+
         <section class="metrics-row" aria-label="Collections metrics">
           <article>
             <span id="queuedMetric">$53,100</span>
@@ -202,6 +235,8 @@
             <div class="draft-actions">
               <button id="copyDraftButton" type="button">Copy draft</button>
               <button id="openEmailButton" type="button">Open email</button>
+              <button id="downloadEmlButton" type="button">Download .eml</button>
+              <button id="markSentButton" type="button">Log sent</button>
               <button id="promiseButton" type="button">Log promise</button>
             </div>
           </section>

@@ -360,6 +360,43 @@ h2 {
   white-space: nowrap;
 }
 
+.settings-panel {
+  margin-bottom: 18px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.settings-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-grid span,
+.draft-box label {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.settings-grid input,
+.settings-grid textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 11px 12px;
+  color: var(--ink);
+  background: #fbfdff;
+}
+
+.settings-wide {
+  grid-column: 1 / -1;
+}
+
 .demo-guide {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -604,12 +641,6 @@ h2 {
   margin-top: 20px;
 }
 
-.draft-box label {
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 800;
-}
-
 .draft-box textarea {
   width: 100%;
   resize: vertical;
@@ -718,6 +749,7 @@ h2 {
   .metrics-row,
   .recovery-list,
   .promise-grid,
+  .settings-grid,
   .sidebar-nav {
     grid-template-columns: 1fr;
   }

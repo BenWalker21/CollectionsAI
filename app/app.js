@@ -10,6 +10,8 @@ const draftTone = document.querySelector("#draftTone");
 const draftBody = document.querySelector("#draftBody");
 const copyDraftButton = document.querySelector("#copyDraftButton");
 const openEmailButton = document.querySelector("#openEmailButton");
+const downloadEmlButton = document.querySelector("#downloadEmlButton");
+const markSentButton = document.querySelector("#markSentButton");
 const promiseButton = document.querySelector("#promiseButton");
 const sendAllButton = document.querySelector("#sendAllButton");
 const downloadCampaignButton = document.querySelector("#downloadCampaignButton");
@@ -30,16 +32,38 @@ const emailMissingMetric = document.querySelector("#emailMissingMetric");
 const recoveryPanel = document.querySelector("#recovered");
 const recoveryList = document.querySelector("#recoveryList");
 const comparisonStatus = document.querySelector("#comparisonStatus");
+const settingsStatus = document.querySelector("#settingsStatus");
+const senderNameInput = document.querySelector("#senderNameInput");
+const senderCompanyInput = document.querySelector("#senderCompanyInput");
+const senderEmailInput = document.querySelector("#senderEmailInput");
+const senderPhoneInput = document.querySelector("#senderPhoneInput");
+const paymentInstructionsInput = document.querySelector("#paymentInstructionsInput");
 
 const agingSnapshotKey = "collectionsai:last-aging-snapshot";
+const settingsKey = "collectionsai:sender-settings";
+const defaultSettings = {
+  senderName: "",
+  senderCompany: "",
+  senderEmail: "",
+  senderPhone: "",
+  paymentInstructions: "Pay online here: {payment_link}, or reply to arrange ACH/check.",
+};
+const tierMeta = {
+  1: { label: "Friendly Reminder", tone: "Friendly" },
+  2: { label: "Past Due Notice", tone: "Firm" },
+  3: { label: "Urgent Notice", tone: "Urgent" },
+  4: { label: "Final Notice", tone: "Final" },
+};
 
 let invoices = [];
 let selectedInvoice = null;
 let lastComparison = null;
+let senderSettings = readSenderSettings();
 
 initialize();
 
 async function initialize() {
+  renderSenderSettings();
   await Promise.all([loadConnectionStatus(), loadInvoices()]);
   showSetupMessageFromQuery();
 }
@@ -94,7 +118,7 @@ function renderInvoices() {
               ${invoice.paymentLink ? " - payment link included" : " - payment link needed"}
             </p>
           </div>
-          <span class="score-pill">${invoice.priorityScore} score</span>
+          <span class="score-pill">T${tierForInvoice(invoice)} · ${invoice.emailsSent || 0} sent</span>
         </button>
       `,
     )
@@ -117,7 +141,7 @@ function selectInvoice(invoiceId) {
   });
 
   draftTitle.textContent = `${selectedInvoice.customer} follow-up`;
-  draftTone.textContent = selectedInvoice.tone;
+  draftTone.textContent = tierMeta[tierForInvoice(selectedInvoice)].label;
   draftBody.value = createDraft(selectedInvoice);
   openEmailButton.disabled = !selectedInvoice.email;
   openEmailButton.textContent = selectedInvoice.email ? "Open email" : "Missing email";
@@ -139,11 +163,13 @@ function updateMetrics() {
 }
 
 function createEmailSubject(invoice) {
-  if (invoice.tone === "Escalated") {
+  const tier = tierForInvoice(invoice);
+
+  if (tier === 4) {
     return `Action needed: overdue balance ${invoice.id}`;
   }
 
-  if (invoice.tone === "Firm") {
+  if (tier >= 2) {
     return `Payment timing needed for ${invoice.id}`;
   }
 
@@ -151,19 +177,24 @@ function createEmailSubject(invoice) {
 }
 
 function createDraft(invoice) {
-  const paymentLine = invoice.paymentLink
-    ? `\n\nPayment link: ${invoice.paymentLink}`
-    : "\n\nIf helpful, I can resend the payment link.";
+  const tier = tierForInvoice(invoice);
+  const contact = invoice.contact || "Accounts Payable";
+  const signature = buildSignature();
+  const instructions = paymentInstructionsFor(invoice);
 
-  if (invoice.tone === "Escalated") {
-    return `Hi ${invoice.contact},\n\nInvoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue, and the previous payment commitment was missed.${paymentLine}\n\nPlease confirm whether payment can be completed today. If not, reply with a proposed payment plan so we can resolve the balance without further escalation.\n\nThank you,\nCollectionsAI`;
+  if (tier === 4) {
+    return `${contact}\n${invoice.customer}\n\nRe: ${invoice.id} - Final Notice\n\nThis is a final notice regarding invoice ${invoice.id} for ${currency.format(invoice.amount)}, which is ${invoice.daysOverdue} days past due.\n\nPlease arrange payment within 7 days using the details below:\n${instructions}\n\nIf payment has already been sent, please reply with the payment date and method so we can update our records.\n\n${signature}`;
   }
 
-  if (invoice.tone === "Firm") {
-    return `Hi ${invoice.contact},\n\nI am following up on invoice ${invoice.id} for ${currency.format(invoice.amount)}, now ${invoice.daysOverdue} days overdue.${paymentLine}\n\nPlease confirm the expected payment date today, or let me know if there is a blocker our team needs to resolve.\n\nThank you,\nCollectionsAI`;
+  if (tier === 3) {
+    return `Hi ${contact},\n\nInvoice ${invoice.id} for ${currency.format(invoice.amount)} remains unpaid and is now ${invoice.daysOverdue} days past due.\n\nPlease arrange payment within 5 business days using the details below:\n${instructions}\n\nIf something is preventing payment, please reply today so we can resolve it directly.\n\n${signature}`;
   }
 
-  return `Hi ${invoice.contact},\n\nHope you are doing well. I wanted to send a quick reminder that invoice ${invoice.id} for ${currency.format(invoice.amount)} is now ${invoice.daysOverdue} days overdue.${paymentLine}\n\nCan you confirm payment timing when you have a moment?\n\nThank you,\nCollectionsAI`;
+  if (tier === 2) {
+    return `Hi ${contact},\n\nI am following up on invoice ${invoice.id} for ${currency.format(invoice.amount)}, which is now ${invoice.daysOverdue} days past due.\n\nCould you please confirm payment timing? Payment details are below:\n${instructions}\n\nIf there is a question or issue with the invoice, reply here and I will help get it sorted out.\n\n${signature}`;
+  }
+
+  return `Hi ${contact},\n\nHope you are doing well. This is a quick reminder that invoice ${invoice.id} for ${currency.format(invoice.amount)} appears to still be open.\n\nPayment details are below:\n${instructions}\n\nIf it has already been sent, please disregard this note. Otherwise, can you confirm payment timing when you have a moment?\n\n${signature}`;
 }
 
 copyDraftButton.addEventListener("click", async () => {
@@ -206,6 +237,30 @@ openEmailButton.addEventListener("click", () => {
   mailto.searchParams.set("subject", createEmailSubject(selectedInvoice));
   mailto.searchParams.set("body", draftBody.value);
   window.location.href = mailto.toString();
+});
+
+downloadEmlButton.addEventListener("click", () => {
+  if (!selectedInvoice) {
+    return;
+  }
+
+  downloadEml(selectedInvoice.email || "", createEmailSubject(selectedInvoice), draftBody.value);
+});
+
+markSentButton.addEventListener("click", () => {
+  if (!selectedInvoice) {
+    return;
+  }
+
+  selectedInvoice.emailsSent = (selectedInvoice.emailsSent || 0) + 1;
+  selectedInvoice.lastEmailedAt = new Date().toISOString();
+  invoices = invoices.map((invoice) => (invoice.id === selectedInvoice.id ? selectedInvoice : invoice));
+  renderInvoices();
+  selectInvoice(selectedInvoice.id);
+  markSentButton.textContent = "Logged";
+  setTimeout(() => {
+    markSentButton.textContent = "Log sent";
+  }, 1600);
 });
 
 downloadCampaignButton.addEventListener("click", () => {
@@ -275,6 +330,24 @@ templateButton.addEventListener("click", () => {
     ],
   ]);
 });
+
+[senderNameInput, senderCompanyInput, senderEmailInput, senderPhoneInput, paymentInstructionsInput].forEach(
+  (input) => {
+    input.addEventListener("input", () => {
+      senderSettings = {
+        senderName: senderNameInput.value,
+        senderCompany: senderCompanyInput.value,
+        senderEmail: senderEmailInput.value,
+        senderPhone: senderPhoneInput.value,
+        paymentInstructions: paymentInstructionsInput.value,
+      };
+      saveSenderSettings();
+      if (selectedInvoice) {
+        draftBody.value = createDraft(selectedInvoice);
+      }
+    });
+  },
+);
 
 async function handleAgingFile(file) {
   if (!file) {
@@ -669,6 +742,8 @@ function agingRowToInvoice(
     priorityScore,
     reason: `${currency.format(amount)} overdue from uploaded AR aging; oldest bucket is ${daysOverdue}+ days.`,
     tone,
+    emailsSent: 0,
+    lastEmailedAt: "",
     promise: "No current promise",
   };
 }
@@ -777,6 +852,58 @@ function likelihoodForDays(daysOverdue) {
   return "Likely to pay";
 }
 
+function tierForInvoice(invoice) {
+  const byDays = invoice.daysOverdue > 90 ? 4 : invoice.daysOverdue > 60 ? 3 : invoice.daysOverdue > 30 ? 2 : 1;
+  const attempts = invoice.emailsSent || 0;
+  const byAttempts = attempts >= 3 ? 4 : attempts === 2 ? 3 : attempts === 1 ? 2 : 1;
+
+  return Math.max(byDays, byAttempts);
+}
+
+function paymentInstructionsFor(invoice) {
+  const instructions = senderSettings.paymentInstructions || defaultSettings.paymentInstructions;
+
+  if (invoice.paymentLink) {
+    return instructions
+      .replaceAll("{payment_link}", invoice.paymentLink)
+      .replaceAll("[your payment link]", invoice.paymentLink);
+  }
+
+  return "If helpful, I can resend the payment link.";
+}
+
+function buildSignature() {
+  const name = senderSettings.senderName || "[Your name]";
+  const company = senderSettings.senderCompany || "[Your company]";
+  const contact = [senderSettings.senderEmail, senderSettings.senderPhone].filter(Boolean).join(" · ");
+
+  return [name, company, contact].filter(Boolean).join("\n");
+}
+
+function readSenderSettings() {
+  try {
+    return { ...defaultSettings, ...JSON.parse(localStorage.getItem(settingsKey) || "{}") };
+  } catch {
+    return { ...defaultSettings };
+  }
+}
+
+function saveSenderSettings() {
+  localStorage.setItem(settingsKey, JSON.stringify(senderSettings));
+  settingsStatus.textContent = "Saved";
+  setTimeout(() => {
+    settingsStatus.textContent = "Saved in browser";
+  }, 1400);
+}
+
+function renderSenderSettings() {
+  senderNameInput.value = senderSettings.senderName;
+  senderCompanyInput.value = senderSettings.senderCompany;
+  senderEmailInput.value = senderSettings.senderEmail;
+  senderPhoneInput.value = senderSettings.senderPhone;
+  paymentInstructionsInput.value = senderSettings.paymentInstructions;
+}
+
 function firstSampleAgingCsv() {
   return [
     "Customer,Email,Payment Link,Current,1 - 30,31 - 60,61 - 90,91 and over,Total",
@@ -861,6 +988,27 @@ function downloadCsv(filename, rows) {
 
   link.href = url;
   link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function downloadEml(to, subject, body) {
+  const eml = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "X-Unsent: 1",
+    "Content-Type: text/plain; charset=utf-8",
+    "",
+    body,
+  ].join("\r\n");
+  const blob = new Blob([eml], { type: "message/rfc822" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = `${subject.replace(/[^a-z0-9]+/gi, "_").slice(0, 48) || "collection_email"}.eml`;
   document.body.append(link);
   link.click();
   link.remove();
