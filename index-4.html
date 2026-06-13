@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AR Follow-Up Workspace</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+  :root { --royal:#1A3FA8; --gold:#C9A227; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  .badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:9999px; display:inline-block; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
+const ROYAL = "var(--royal)", GOLD = "var(--gold)";
+
+const store = {
+  get(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const DEFAULT_SETTINGS = {
+  senderName: "", senderTitle: "", senderCompany: "", senderEmail: "", senderPhone: "",
+  paymentInstructions: "Pay online at [your payment link], or reply to arrange ACH/check."
+};
+
+/* ===== parse engine ===== */
+const FIELD_SYNONYMS = {
+  date:["date"], type:["transaction type","type"],
+  num:["num","invoice number","invoice no","invoice #","invoice","doc number","number","ref"],
+  cust:["customer full name","customer","client","company","name","payer","account"],
+  due:["due date","date due","due"], amount:["amount","original amount","invoice amount"],
+  open:["open balance","balance","amount due","open"],
+};
+const HEADER_KEYWORDS = ["date","num","customer","due","amount","balance","type","invoice"];
+const toNumber = (v) => { if (v==null) return null; const s=String(v).replace(/[^0-9.\-]/g,""); if(s===""||s==="-"||s===".") return null; const n=parseFloat(s); return isNaN(n)?null:n; };
+const cell = (row, idx) => (idx==null||idx>=row.length?"":String(row[idx]??""));
+const parseDateSafe = (s) => { if(!s) return null; const d=new Date(s); return isNaN(d.getTime())?null:d; };
+const headerScore = (row) => { const j=row.map(c=>String(c||"").toLowerCase()).join(" "); return HEADER_KEYWORDS.reduce((s,k)=>s+(j.includes(k)?1:0),0); };
+function matchColumn(hl, syns, exclude=[]) { for(const syn of syns) for(let i=0;i<hl.length;i++) if(hl[i].includes(syn)&&!exclude.some(x=>hl[i].includes(x))) return i; return null; }
+function detect(rows) {
+  let hri=0,best=-1; rows.forEach((r,i)=>{const s=headerScore(r); if(s>best){best=s;hri=i;}});
+  const header=(rows[hri]||[]).map(c=>String(c||"").trim()); const hl=header.map(h=>h.toLowerCase());
+  const mapping={ due:matchColumn(hl,FIELD_SYNONYMS.due), date:matchColumn(hl,FIELD_SYNONYMS.date,["due"]), type:matchColumn(hl,FIELD_SYNONYMS.type), num:matchColumn(hl,FIELD_SYNONYMS.num), cust:matchColumn(hl,FIELD_SYNONYMS.cust), amount:matchColumn(hl,FIELD_SYNONYMS.amount), open:matchColumn(hl,FIELD_SYNONYMS.open) };
+  const balanceIdx=mapping.open!=null?mapping.open:mapping.amount;
+  return { headerRowIndex:hri, header, mapping, needsReview: best<3||mapping.num==null||balanceIdx==null };
+}
+function build(rows, hri, mapping) {
+  const balanceIdx=mapping.open!=null?mapping.open:mapping.amount; const invoices=[];
+  for(let i=hri+1;i<rows.length;i++){ const r=rows[i]; if(!r||!r.some(c=>String(c||"").trim())) continue;
+    const invoiceNo=cell(r,mapping.num).trim(); const openBal=toNumber(cell(r,balanceIdx));
+    if(!invoiceNo||openBal==null) continue; if(openBal===0) continue;
+    const custRaw=cell(r,mapping.cust).trim(); const account=custRaw.split(":")[0].trim()||custRaw;
+    let contact=""; if(custRaw.includes(":")) contact=custRaw.split(":")[1].replace(/DG-\d+.*$/i,"").replace(/\(.*\)/g,"").trim();
+    const dg=custRaw.match(/DG-\d+/i); const due=parseDateSafe(cell(r,mapping.due).trim())||parseDateSafe(cell(r,mapping.date).trim());
+    invoices.push({ id:`inv_${i}_${Math.random().toString(36).slice(2,7)}`, company:account, contact, customerFull:custRaw, dg:dg?dg[0].toUpperCase():"", invoiceNo, currentBalance:openBal, dueDate:due?due.toISOString():null, daysPastDue:due?Math.max(0,Math.floor((Date.now()-due.getTime())/86400000)):0, billingAddress:"", email:"", status:"open", emailsSent:0, promisedUntil:null, paidSinceLastUpload:false, interactions:[] });
+  }
+  return invoices;
+}
+function fileToRows(file) {
+  const ext=file.name.split(".").pop().toLowerCase();
+  return new Promise((resolve)=>{ if(ext==="csv"){ Papa.parse(file,{header:false,skipEmptyLines:false,complete:(res)=>resolve(res.data)}); } else { const reader=new FileReader(); reader.onload=(e)=>{ const wb=XLSX.read(e.target.result,{type:"array",cellDates:true}); const ws=wb.Sheets[wb.SheetNames[0]]; resolve(XLSX.utils.sheet_to_json(ws,{header:1,defval:""})); }; reader.readAsArrayBuffer(file); } });
+}
+function sanityWarnings(invs){ const w=[]; if(!invs.length){w.push("No invoices found \u2014 the columns are probably mapped wrong."); return w;} const n=invs.length;
+  if(invs.filter(i=>/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(i.invoiceNo)).length/n>0.3) w.push("The Invoice # column looks like dates \u2014 wrong column selected?");
+  if(invs.filter(i=>!i.company).length/n>0.3) w.push("Most rows have no customer \u2014 check the Customer column.");
+  return w;
+}
+
+const fmtMoney=(n)=>"$"+(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtDate=(d)=>d?new Date(d).toLocaleDateString():"";
+const colLabel=(header,i)=>`${String.fromCharCode(65+(i%26))}: ${header[i]&&header[i].trim()?header[i]:"(blank)"}`;
+const tierFromDays=(d)=>d>90?4:d>60?3:d>30?2:1;
+const tierFromAttempts=(a)=>a>=3?4:a===2?3:a===1?2:1;
+const suggestedTier=(inv)=>Math.max(tierFromDays(inv.daysPastDue),tierFromAttempts(inv.emailsSent||0));
+function priorityScore(inv,maxBal){ const a=maxBal>0?inv.currentBalance/maxBal:0; return 0.5*a+0.3*Math.min((inv.daysPastDue||0)/90,1)+0.2*Math.min((inv.emailsSent||0)/3,1); }
+const TIER_META={1:{name:"Friendly Reminder",color:"bg-emerald-100 text-emerald-800"},2:{name:"Past Due Notice",color:"bg-amber-100 text-amber-800"},3:{name:"Urgent Notice",color:"bg-orange-100 text-orange-800"},4:{name:"Final Notice",color:"bg-red-100 text-red-800"}};
+
+function sig(s){ return `${s.senderName||"[Your name]"}\n${[s.senderTitle,s.senderCompany||"[Your company]"].filter(Boolean).join(", ")}\n${[s.senderEmail,s.senderPhone].filter(Boolean).join(" \u00b7 ")}`; }
+
+/* ===== single-invoice email ===== */
+function buildEmail(tier, inv, s) {
+  const f={contact:inv.contact||inv.company||"there",company:inv.company||"",no:inv.invoiceNo||"",amt:fmtMoney(inv.currentBalance),due:fmtDate(inv.dueDate),days:String(inv.daysPastDue),addr:inv.billingAddress||"",pay:s.paymentInstructions||""};
+  const S=sig(s);
+  const T={
+    1:{subject:`Friendly reminder: Invoice ${f.no} from ${s.senderCompany||"us"}`,body:`Hi ${f.contact},\n\nQuick reminder that Invoice ${f.no} for ${f.amt} was due on ${f.due} and appears still open on our end.\n\nIf it's already on its way, please disregard. Otherwise, here's how to pay:\n${f.pay}\n\nAny questions, just reply and I'll help.\n\nThanks so much,\n${S}`},
+    2:{subject:`Past due: Invoice ${f.no} (${f.days} days)`,body:`Hi ${f.contact},\n\nFollowing up on Invoice ${f.no} for ${f.amt}, now ${f.days} days past due (due ${f.due}).\n\nCould you please arrange payment soon? Here's how:\n${f.pay}\n\nIf there's an issue or you need to discuss timing, reply here or call me at ${s.senderPhone||""}.\n\nBest regards,\n${S}`},
+    3:{subject:`Urgent: Invoice ${f.no} requires your attention`,body:`Hi ${f.contact},\n\nDespite previous reminders, Invoice ${f.no} for ${f.amt} remains unpaid and is now ${f.days} days past due.\n\nI'm requesting payment in full within 5 business days:\n${f.pay}\n\nIf payment was sent, tell me the date/method. If something's preventing it, please call me at ${s.senderPhone||""} today.\n\nRegards,\n${S}`},
+    4:{subject:`Final notice: Invoice ${f.no} \u2014 ${f.amt} past due`,body:`${f.contact}\n${f.company}\n\nRe: Invoice ${f.no} \u2014 Final Notice\n\nThis is a final notice regarding Invoice ${f.no} for ${f.amt}, ${f.days} days past due and unpaid despite previous attempts.\n\nWe ask that payment in full be received within 7 days:\n${f.pay}\n\nIf we don't hear from you, we may need to review next steps for resolving the balance. We'd much prefer to settle this directly.\n\nIf you've already paid, please contact me with the details.\n\n${S}`}
+  };
+  return T[tier];
+}
+
+/* ===== combined (multi-invoice) email ===== */
+function buildCombinedEmail(tier, invs, s) {
+  const contact=invs[0].contact||invs[0].company||"there"; const company=invs[0].company||"";
+  const total=invs.reduce((a,i)=>a+i.currentBalance,0);
+  const list=invs.map(i=>`  \u2022 Invoice ${i.invoiceNo} \u2014 due ${fmtDate(i.dueDate)} \u2014 ${fmtMoney(i.currentBalance)}`).join("\n");
+  const intro={1:"Quick reminder \u2014 the following invoices are showing as open on our end:",2:"Following up \u2014 the invoices below are now past due:",3:"These invoices remain unpaid and need your attention:",4:"Final notice \u2014 the following invoices are significantly past due:"}[tier];
+  const closing={1:"If any are already on their way, please disregard.",2:"Could you please arrange payment soon?",3:"I'm requesting payment in full within 5 business days.",4:"We ask that payment in full be received within 7 days."}[tier];
+  return {
+    subject:`Past-due invoices with ${s.senderCompany||"us"} (${invs.length})`,
+    body:`Hi ${contact},\n\n${intro}\n\n${list}\n\nTotal past due: ${fmtMoney(total)}\n\n${closing} Here's how to pay:\n${s.paymentInstructions||""}\n\nIf you have questions on any of these, just reply and I'll help.\n\nBest regards,\n${sig(s)}`
+  };
+}
+
+function downloadEml(to,subject,body){ const eml=`To: ${to||""}\r\nSubject: ${subject}\r\nX-Unsent: 1\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n${body}`; const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([eml],{type:"message/rfc822"})); a.download=`${(subject||"email").replace(/[^a-z0-9]+/gi,"_").slice(0,40)}.eml`; a.click(); }
+
+/* ============================ APP ============================ */
+function App() {
+  const [tab,setTab]=useState("worklist");
+  const [settings,setSettings]=useState(()=>store.get("arw_settings",DEFAULT_SETTINGS));
+  const [invoices,setInvoices]=useState(()=>store.get("arw_invoices",[]));
+  const [customerEmails,setCustomerEmails]=useState(()=>store.get("arw_emails",{}));
+  const [selected,setSelected]=useState(null);
+  const [combined,setCombined]=useState(null);
+  const [importing,setImporting]=useState(false);
+  const [reconcile,setReconcile]=useState(null);
+  const [selectedIds,setSelectedIds]=useState([]);
+  const [view,setView]=useState("active");
+  const [search,setSearch]=useState("");
+
+  useEffect(()=>store.set("arw_settings",settings),[settings]);
+  useEffect(()=>store.set("arw_invoices",invoices),[invoices]);
+  useEffect(()=>store.set("arw_emails",customerEmails),[customerEmails]);
+  const setupDone=settings.senderName&&settings.senderCompany;
+
+  function update(id,patch){ setInvoices(p=>p.map(i=>i.id===id?{...i,...patch}:i)); }
+  function addInteraction(id,kind,text,tier){ setInvoices(p=>p.map(i=>i.id===id?{...i,interactions:[...i.interactions,{kind,text:text||"",tier:tier||null,at:new Date().toISOString()}]}:i)); }
+  function markSent(id,tier){ const inv=invoices.find(i=>i.id===id); update(id,{emailsSent:(inv.emailsSent||0)+1}); addInteraction(id,"emailed",`Tier ${tier} email sent`,tier); }
+  function markSentMany(ids,tier){ ids.forEach(id=>markSent(id,tier)); }
+
+  // CHANGE 3: remember a customer's email once entered
+  function rememberEmail(account,email){
+    if(!email) return;
+    if(email.includes("@")){ setCustomerEmails(prev=>({...prev,[account]:email})); }
+    setInvoices(prev=>prev.map(i=>i.company===account?{...i,email}:i));
+  }
+
+  // CHANGE 1: reconcile on upload (preserve history + flag paid-since-last-upload)
+  function handleImport(incomingRaw){
+    const incoming=incomingRaw.map(i=>({...i,email:customerEmails[i.company]||i.email||""}));
+    setImporting(false); setSelectedIds([]); setView("active");
+    if(!invoices.length){ setInvoices(incoming); setReconcile(null); return; }
+    const prevByNo=new Map(invoices.map(i=>[i.invoiceNo,i]));
+    const incomingNos=new Set(incoming.map(i=>i.invoiceNo));
+    let carried=0,added=0;
+    const merged=incoming.map(inv=>{ const old=prevByNo.get(inv.invoiceNo);
+      if(old){ carried++; return {...inv,id:old.id,emailsSent:old.emailsSent||0,interactions:old.interactions||[],email:old.email||inv.email,promisedUntil:old.promisedUntil||null,status:old.status==="paid"?"open":old.status,paidSinceLastUpload:false}; }
+      added++; return inv;
+    });
+    const paidNow=[];
+    invoices.forEach(old=>{ if(!incomingNos.has(old.invoiceNo)&&old.status!=="paid"){ paidNow.push({...old,status:"paid",paidSinceLastUpload:true,interactions:[...(old.interactions||[]),{kind:"reconciled",text:"No longer on aging report \u2014 marked paid",at:new Date().toISOString()}]}); } });
+    setInvoices([...merged,...paidNow]);
+    setReconcile({paid:paidNow.length,carried,added});
+  }
+
+  const active=invoices.filter(i=>!["paid","skip"].includes(i.status)&&!(i.status==="promised"&&i.promisedUntil&&new Date(i.promisedUntil)>new Date()));
+  const recentlyPaid=invoices.filter(i=>i.paidSinceLastUpload);
+  const maxBal=Math.max(1,...invoices.map(i=>i.currentBalance||0));
+  let shown=(view==="paid"?recentlyPaid:active);
+  if(search.trim()){ const q=search.toLowerCase(); shown=shown.filter(i=>(i.company||"").toLowerCase().includes(q)||(i.invoiceNo||"").toLowerCase().includes(q)); }
+  const sorted=shown.map(i=>({...i,_p:priorityScore(i,maxBal),_t:suggestedTier(i)})).sort((a,b)=>b._p-a._p);
+
+  const totalAR=invoices.filter(i=>i.status!=="paid").reduce((s,i)=>s+i.currentBalance,0);
+  const pastDueAR=invoices.filter(i=>i.status!=="paid"&&i.daysPastDue>0).reduce((s,i)=>s+i.currentBalance,0);
+  const promisedAmt=invoices.filter(i=>i.status==="promised").reduce((s,i)=>s+i.currentBalance,0);
+  const avgAge=active.length?Math.round(active.reduce((s,i)=>s+i.currentBalance*i.daysPastDue,0)/Math.max(1,active.reduce((s,i)=>s+i.currentBalance,0))):0;
+
+  function toggleSel(id){ setSelectedIds(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id]); }
+  function draftCombined(){
+    const chosen=invoices.filter(i=>selectedIds.includes(i.id));
+    const accounts=[...new Set(chosen.map(i=>i.company))];
+    if(accounts.length>1){ alert("These invoices are for different customers. Select one customer's invoices at a time for a combined email."); return; }
+    setCombined(chosen);
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 md:p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div><h1 className="text-xl font-bold" style={{color:ROYAL}}>AR Follow-Up Workspace</h1><p className="text-xs text-slate-500">Upload aging \u2192 prioritized queue \u2192 draft \u2192 send.</p></div>
+        <div className="flex gap-2">
+          <button onClick={()=>setTab("worklist")} className={`px-3 py-1.5 rounded text-sm font-medium ${tab==="worklist"?"text-white":"bg-white border"}`} style={tab==="worklist"?{background:ROYAL}:{}}>Worklist</button>
+          <button onClick={()=>setTab("settings")} className={`px-3 py-1.5 rounded text-sm font-medium ${tab==="settings"?"text-white":"bg-white border"}`} style={tab==="settings"?{background:ROYAL}:{}}>Settings</button>
+        </div>
+      </div>
+
+      {!setupDone && <div className="mb-4 p-3 rounded-lg border border-amber-300 bg-amber-50 text-sm text-amber-900">Fill in your sender details in <b>Settings</b> first \u2014 they sign every email.</div>}
+
+      {tab==="settings" && <Settings settings={settings} setSettings={setSettings} />}
+
+      {tab==="worklist" && (<>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+          <Metric label="Total AR" value={fmtMoney(totalAR)} />
+          <Metric label="Past-due AR" value={fmtMoney(pastDueAR)} />
+          <Metric label="Avg age (days)" value={avgAge} hint="weighted; not DSO" />
+          <Metric label="Promised" value={fmtMoney(promisedAmt)} accent />
+          <Metric label="Need action" value={active.length} />
+        </div>
+
+        {reconcile && (
+          <div className="mb-4 p-3 rounded-lg border border-emerald-300 bg-emerald-50 text-sm text-emerald-900 flex items-center justify-between">
+            <span>Since your last upload: <b>{reconcile.paid}</b> marked paid \u00b7 <b>{reconcile.carried}</b> carried over with history \u00b7 <b>{reconcile.added}</b> new.{reconcile.paid>0 && <button onClick={()=>setView("paid")} className="underline ml-2">View paid</button>}</span>
+            <button onClick={()=>setReconcile(null)} className="text-emerald-700">\u00d7</button>
+          </div>
+        )}
+
+        {importing || invoices.length===0 ? (
+          <ImportFlow onImport={handleImport} onCancel={()=>setImporting(false)} canCancel={invoices.length>0} />
+        ) : (
+          <div className="flex items-center gap-3 flex-wrap mb-3">
+            <button onClick={()=>setImporting(true)} className="px-4 py-2 rounded-lg text-white text-sm font-medium" style={{background:ROYAL}}>Upload new aging report</button>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search customer or invoice #" className="border rounded px-3 py-2 text-sm flex-1 min-w-[180px]" />
+            <div className="flex gap-1">
+              <button onClick={()=>setView("active")} className={`px-3 py-1.5 rounded text-sm ${view==="active"?"text-white":"bg-white border"}`} style={view==="active"?{background:ROYAL}:{}}>Active</button>
+              <button onClick={()=>setView("paid")} className={`px-3 py-1.5 rounded text-sm ${view==="paid"?"text-white":"bg-white border"}`} style={view==="paid"?{background:ROYAL}:{}}>Recently paid ({recentlyPaid.length})</button>
+            </div>
+            <button onClick={()=>{ if(confirm("Clear all invoices?")) setInvoices([]); }} className="text-sm text-slate-500 underline">Clear all</button>
+          </div>
+        )}
+
+        {/* CHANGE 2: combined-email selection bar */}
+        {!importing && selectedIds.length>0 && (
+          <div className="mb-3 p-2 rounded-lg flex items-center gap-3 text-sm text-white" style={{background:ROYAL}}>
+            <span className="font-medium">{selectedIds.length} selected</span>
+            <button onClick={draftCombined} className="px-3 py-1 rounded font-medium" style={{background:GOLD}}>Draft combined email</button>
+            <button onClick={()=>setSelectedIds([])} className="underline ml-auto">Clear selection</button>
+          </div>
+        )}
+
+        {!importing && sorted.length>0 && (
+          <div className="bg-white rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-500 text-left text-xs uppercase">
+                <tr><th className="p-2 w-6"></th><th className="p-2">Priority</th><th className="p-2">Customer</th><th className="p-2">Invoice #</th><th className="p-2 text-right">Balance</th><th className="p-2 text-right">Days</th><th className="p-2">Tier</th><th className="p-2">Sent</th><th className="p-2">Status</th><th className="p-2"></th></tr>
+              </thead>
+              <tbody>
+                {sorted.map(inv=>{ const pl=inv._p>=0.66?["High","bg-red-100 text-red-800"]:inv._p>=0.33?["Med","bg-amber-100 text-amber-800"]:["Low","bg-slate-100 text-slate-700"]; return (
+                  <tr key={inv.id} className="border-t hover:bg-slate-50">
+                    <td className="p-2"><input type="checkbox" checked={selectedIds.includes(inv.id)} onChange={()=>toggleSel(inv.id)} /></td>
+                    <td className="p-2"><span className={"badge "+pl[1]}>{pl[0]}</span></td>
+                    <td className="p-2 font-medium">{inv.company}{inv.email&&<span className="text-emerald-600" title={inv.email}> \u2709</span>}{inv.contact&&<span className="text-slate-400 font-normal"> \u00b7 {inv.contact}</span>}{inv.dg&&<span className="text-slate-300 font-normal text-xs"> \u00b7 {inv.dg}</span>}</td>
+                    <td className="p-2 text-slate-600">{inv.invoiceNo}</td>
+                    <td className="p-2 text-right">{fmtMoney(inv.currentBalance)}</td>
+                    <td className="p-2 text-right">{inv.daysPastDue}</td>
+                    <td className="p-2"><span className={"badge "+TIER_META[inv._t].color}>{TIER_META[inv._t].name}</span></td>
+                    <td className="p-2 text-center">{inv.emailsSent||0}</td>
+                    <td className="p-2"><StatusPill inv={inv} update={update} addInteraction={addInteraction} /></td>
+                    <td className="p-2 text-right"><button onClick={()=>setSelected(inv.id)} className="text-white text-xs px-2.5 py-1 rounded" style={{background:GOLD}}>Draft</button></td>
+                  </tr>
+                ); })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {!importing && sorted.length===0 && invoices.length>0 && <div className="text-center text-slate-400 text-sm py-10 border-2 border-dashed rounded-lg">Nothing to show here.</div>}
+      </>)}
+
+      {selected && <DraftModal inv={invoices.find(i=>i.id===selected)} settings={settings} onClose={()=>setSelected(null)} onSent={(t)=>markSent(selected,t)} addInteraction={addInteraction} rememberEmail={rememberEmail} />}
+      {combined && <CombinedModal invs={combined} settings={settings} onClose={()=>setCombined(null)} onSent={(t)=>{markSentMany(combined.map(i=>i.id),t); setSelectedIds([]);}} rememberEmail={rememberEmail} />}
+
+      <p className="text-center text-xs text-slate-400 mt-6">Data saved in this browser only. Settings \u2192 Export to back it up.</p>
+    </div>
+  );
+}
+
+function ImportFlow({onImport,onCancel,canCancel}){
+  const [stage,setStage]=useState("idle"); const [rows,setRows]=useState(null); const [header,setHeader]=useState([]); const [hri,setHri]=useState(0); const [mapping,setMapping]=useState(null); const [invs,setInvs]=useState([]);
+  async function onFile(file){ const r=await fileToRows(file); const det=detect(r); const inv=build(r,det.headerRowIndex,det.mapping); setRows(r);setHeader(det.header);setHri(det.headerRowIndex);setMapping(det.mapping);setInvs(inv); setStage(det.needsReview?"mapping":"preview"); }
+  function remap(field,value){ const m={...mapping,[field]:value===""?null:parseInt(value)}; setMapping(m); setInvs(build(rows,hri,m)); }
+  const total=invs.reduce((s,i)=>s+i.currentBalance,0); const oldest=invs.reduce((m,i)=>Math.max(m,i.daysPastDue),0); const warnings=stage!=="idle"?sanityWarnings(invs):[];
+  const fields=[["num","Invoice number *"],["cust","Customer *"],["open","Open balance *"],["amount","Amount (fallback)"],["due","Due date"],["date","Transaction date"]];
+  if(stage==="idle") return (<div className="mb-4 flex items-center gap-3 flex-wrap"><label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium cursor-pointer" style={{background:ROYAL}}>Upload AR aging (.csv / .xlsx)<input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={(e)=>e.target.files[0]&&onFile(e.target.files[0])} /></label>{canCancel&&<button onClick={onCancel} className="text-sm text-slate-500 underline">Cancel</button>}</div>);
+  return (
+    <div className="mb-4">
+      <div className="grid grid-cols-3 gap-3 mb-3"><Metric label="Invoices found" value={invs.length} /><Metric label="Total open" value={fmtMoney(total)} accent /><Metric label="Oldest (days)" value={oldest} /></div>
+      {warnings.map((w,i)=><div key={i} className="mb-2 text-sm rounded p-2 border border-amber-300 bg-amber-50 text-amber-900">\u26a0 {w}</div>)}
+      {stage==="mapping" && (<div className="mb-3 bg-white border rounded-lg p-3"><div className="text-sm font-semibold mb-1">Match your columns</div><p className="text-xs text-slate-500 mb-3">Header found on row {hri+1}. Pick the right column per field \u2014 the preview updates live.</p><div className="grid md:grid-cols-2 gap-2">{fields.map(([key,label])=>(<div key={key} className="flex items-center gap-2"><label className="text-xs w-36 text-slate-600">{label}</label><select value={mapping[key]??""} onChange={(e)=>remap(key,e.target.value)} className="flex-1 border rounded px-2 py-1 text-sm"><option value="">\u2014 none \u2014</option>{header.map((_,i)=><option key={i} value={i}>{colLabel(header,i)}</option>)}</select></div>))}</div></div>)}
+      <div className="bg-white border rounded-lg overflow-hidden mb-3"><div className="text-xs text-slate-500 px-3 py-2 bg-slate-50 border-b">Sample of first {Math.min(5,invs.length)} rows \u2014 confirm this looks right</div><table className="w-full text-sm"><thead className="text-xs text-slate-400 text-left"><tr><th className="p-2">Invoice #</th><th className="p-2">Customer</th><th className="p-2">Job</th><th className="p-2 text-right">Balance</th><th className="p-2 text-right">Days</th></tr></thead><tbody>{invs.slice(0,5).map((inv,i)=>(<tr key={i} className="border-t"><td className="p-2">{inv.invoiceNo}</td><td className="p-2">{inv.company||<span className="text-red-500">\u2014 missing \u2014</span>}{inv.contact&&<span className="text-slate-400"> \u00b7 {inv.contact}</span>}</td><td className="p-2 text-slate-500">{inv.dg}</td><td className="p-2 text-right">{fmtMoney(inv.currentBalance)}</td><td className="p-2 text-right">{inv.daysPastDue}</td></tr>))}</tbody></table></div>
+      <div className="flex flex-wrap gap-2"><button onClick={()=>onImport(invs)} disabled={!invs.length} className="px-4 py-2 rounded text-white text-sm font-medium disabled:opacity-40" style={{background:ROYAL}}>Import {invs.length} invoices</button>{stage==="preview"&&<button onClick={()=>setStage("mapping")} className="px-4 py-2 rounded border text-sm">Columns look wrong?</button>}<button onClick={()=>{setStage("idle"); if(canCancel) onCancel();}} className="px-4 py-2 rounded border text-sm text-slate-500">Cancel</button></div>
+    </div>
+  );
+}
+
+function Metric({label,value,hint,accent}){ return (<div className="bg-white rounded-lg border p-3"><div className="text-xs text-slate-500">{label}</div><div className="text-lg font-bold" style={{color:accent?GOLD:ROYAL}}>{value}</div>{hint&&<div className="text-[10px] text-slate-400">{hint}</div>}</div>); }
+
+function StatusPill({inv,update,addInteraction}){
+  function setStatus(e){ const v=e.target.value;
+    if(v==="promised"){ const d=prompt("Promised to pay by (e.g. 2026-06-30):",""); const dt=d?new Date(d):null; update(inv.id,{status:"promised",promisedUntil:dt&&!isNaN(dt)?dt.toISOString():null}); addInteraction(inv.id,"promised",`Promised by ${d||"?"}`); }
+    else { update(inv.id,{status:v}); if(v==="paid") addInteraction(inv.id,"reconciled","Marked paid"); }
+  }
+  return (<select value={inv.status} onChange={setStatus} className="border rounded px-1.5 py-0.5 text-xs bg-white"><option value="open">Open</option><option value="promised">Promised</option><option value="disputed">Disputed</option><option value="paid">Paid</option><option value="skip">Skip</option></select>);
+}
+
+/* CHANGE 4: To-email field at top of draft */
+function EmailField({value,onChange}){
+  return (<div className="mb-3"><label className="text-xs text-slate-600">To (email)</label><input value={value||""} onChange={e=>onChange(e.target.value)} placeholder="customer@email.com \u2014 saved & reused once entered" className="w-full border rounded px-2 py-1.5 text-sm" /></div>);
+}
+
+function DraftModal({inv,settings,onClose,onSent,addInteraction,rememberEmail}){
+  const [tier,setTier]=useState(suggestedTier(inv));
+  const base=useMemo(()=>buildEmail(tier,inv,settings),[tier,inv,settings]);
+  const [subject,setSubject]=useState(base.subject); const [body,setBody]=useState(base.body);
+  const [email,setEmail]=useState(inv.email||""); const [note,setNote]=useState("");
+  useEffect(()=>{setSubject(base.subject);setBody(base.body);},[tier]);
+  function changeEmail(v){ setEmail(v); rememberEmail(inv.company,v); }
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-center p-4 overflow-auto z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg max-w-2xl w-full p-5 mt-6" onClick={e=>e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-3"><div><div className="font-bold">{inv.company}{inv.contact&&<span className="text-slate-400 font-normal"> \u00b7 {inv.contact}</span>}</div><div className="text-xs text-slate-500">Invoice {inv.invoiceNo} \u00b7 {fmtMoney(inv.currentBalance)} \u00b7 {inv.daysPastDue} days past due{inv.dg&&` \u00b7 ${inv.dg}`}</div></div><button onClick={onClose} className="text-slate-400 text-xl leading-none">\u00d7</button></div>
+        <EmailField value={email} onChange={changeEmail} />
+        <div className="flex gap-1 mb-3">{[1,2,3,4].map(t=><button key={t} onClick={()=>setTier(t)} className={`text-xs px-2 py-1 rounded border ${tier===t?"text-white":""}`} style={tier===t?{background:ROYAL,borderColor:ROYAL}:{}}>T{t} {TIER_META[t].name.split(" ")[0]}</button>)}</div>
+        <input value={subject} onChange={e=>setSubject(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm mb-2 font-medium" />
+        <textarea value={body} onChange={e=>setBody(e.target.value)} rows={12} className="w-full border rounded px-2 py-1.5 text-sm font-mono mb-3" />
+        <div className="flex flex-wrap gap-2 mb-4"><button onClick={()=>navigator.clipboard.writeText(body)} className="px-3 py-1.5 rounded border text-sm">Copy body</button><a href={`mailto:${email||""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} className="px-3 py-1.5 rounded border text-sm">Open in mail app</a><button onClick={()=>downloadEml(email,subject,body)} className="px-3 py-1.5 rounded border text-sm">Download .eml</button><button onClick={()=>{onSent(tier);onClose();}} className="px-3 py-1.5 rounded text-white text-sm font-medium ml-auto" style={{background:GOLD}}>I sent this \u2192 log it</button></div>
+        <div className="border-t pt-3"><div className="text-xs font-semibold text-slate-600 mb-1">Notes & history</div><div className="flex gap-2 mb-2"><input value={note} onChange={e=>setNote(e.target.value)} placeholder='e.g. "Controller said paying Friday"' className="flex-1 border rounded px-2 py-1 text-xs" /><button onClick={()=>{if(note.trim()){addInteraction(inv.id,"note",note.trim());setNote("");}}} className="px-2 py-1 rounded border text-xs">Add</button></div><div className="max-h-28 overflow-auto text-xs space-y-1">{[...(inv.interactions||[])].reverse().map((it,i)=><div key={i} className="text-slate-500"><span className="text-slate-400">{fmtDate(it.at)}</span> \u2014 {it.text||it.kind}</div>)}</div></div>
+      </div>
+    </div>
+  );
+}
+
+function CombinedModal({invs,settings,onClose,onSent,rememberEmail}){
+  const account=invs[0].company;
+  const [tier,setTier]=useState(Math.max(...invs.map(suggestedTier)));
+  const base=useMemo(()=>buildCombinedEmail(tier,invs,settings),[tier,invs,settings]);
+  const [subject,setSubject]=useState(base.subject); const [body,setBody]=useState(base.body);
+  const [email,setEmail]=useState(invs[0].email||"");
+  useEffect(()=>{setSubject(base.subject);setBody(base.body);},[tier]);
+  const total=invs.reduce((a,i)=>a+i.currentBalance,0);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-start justify-center p-4 overflow-auto z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg max-w-2xl w-full p-5 mt-6" onClick={e=>e.stopPropagation()}>
+        <div className="flex justify-between items-start mb-2"><div><div className="font-bold">{account}</div><div className="text-xs text-slate-500">{invs.length} invoices \u00b7 {fmtMoney(total)} total past due</div></div><button onClick={onClose} className="text-slate-400 text-xl leading-none">\u00d7</button></div>
+        <div className="text-xs text-slate-500 bg-slate-50 border rounded p-2 mb-3 max-h-20 overflow-auto">{invs.map((i,k)=><div key={k}>Invoice {i.invoiceNo} \u2014 {fmtMoney(i.currentBalance)} \u2014 {i.daysPastDue}d</div>)}</div>
+        <EmailField value={email} onChange={(v)=>{setEmail(v);rememberEmail(account,v);}} />
+        <div className="flex gap-1 mb-3">{[1,2,3,4].map(t=><button key={t} onClick={()=>setTier(t)} className={`text-xs px-2 py-1 rounded border ${tier===t?"text-white":""}`} style={tier===t?{background:ROYAL,borderColor:ROYAL}:{}}>T{t} {TIER_META[t].name.split(" ")[0]}</button>)}</div>
+        <input value={subject} onChange={e=>setSubject(e.target.value)} className="w-full border rounded px-2 py-1.5 text-sm mb-2 font-medium" />
+        <textarea value={body} onChange={e=>setBody(e.target.value)} rows={12} className="w-full border rounded px-2 py-1.5 text-sm font-mono mb-3" />
+        <div className="flex flex-wrap gap-2"><button onClick={()=>navigator.clipboard.writeText(body)} className="px-3 py-1.5 rounded border text-sm">Copy body</button><a href={`mailto:${email||""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`} className="px-3 py-1.5 rounded border text-sm">Open in mail app</a><button onClick={()=>downloadEml(email,subject,body)} className="px-3 py-1.5 rounded border text-sm">Download .eml</button><button onClick={()=>{onSent(tier);onClose();}} className="px-3 py-1.5 rounded text-white text-sm font-medium ml-auto" style={{background:GOLD}}>I sent this \u2192 log to all {invs.length}</button></div>
+      </div>
+    </div>
+  );
+}
+
+function Settings({settings,setSettings}){
+  const f=(k)=>({value:settings[k]||"",onChange:e=>setSettings({...settings,[k]:e.target.value})});
+  function exportData(){ const data={settings:store.get("arw_settings",{}),invoices:store.get("arw_invoices",[]),emails:store.get("arw_emails",{})}; const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"})); a.download="ar-workspace-backup.json"; a.click(); }
+  return (
+    <div className="bg-white border rounded-lg p-5 max-w-xl">
+      <div className="font-semibold mb-3">Sender identity</div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Your name *"><input {...f("senderName")} className="w-full border rounded px-2 py-1.5 text-sm" /></Field>
+        <Field label="Title"><input {...f("senderTitle")} className="w-full border rounded px-2 py-1.5 text-sm" /></Field>
+        <Field label="Company *"><input {...f("senderCompany")} className="w-full border rounded px-2 py-1.5 text-sm" /></Field>
+        <Field label="Reply-to email"><input {...f("senderEmail")} className="w-full border rounded px-2 py-1.5 text-sm" /></Field>
+        <Field label="Phone"><input {...f("senderPhone")} className="w-full border rounded px-2 py-1.5 text-sm" /></Field>
+      </div>
+      <div className="mt-3"><Field label="Payment instructions / link (shown in every email)"><textarea {...f("paymentInstructions")} rows={3} className="w-full border rounded px-2 py-1.5 text-sm" /></Field></div>
+      <div className="mt-4"><button onClick={exportData} className="px-3 py-1.5 rounded border text-sm">Export backup (JSON)</button></div>
+    </div>
+  );
+}
+function Field({label,children}){ return <label className="block"><span className="text-xs text-slate-600">{label}</span>{children}</label>; }
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
