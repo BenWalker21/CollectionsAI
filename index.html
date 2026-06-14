@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CollectionsAI is an AI collections copilot that prioritizes overdue invoices, drafts personalized follow-ups, tracks promises, and helps recover cash faster."
+    />
+    <title>CollectionsAI | AI Collections Copilot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Main navigation">
+        <a class="brand" href="#top" aria-label="CollectionsAI home">
+          <span class="brand-mark">CA</span>
+          <span>CollectionsAI</span>
+        </a>
+        <div class="nav-links">
+          <a href="#pipeline">Pipeline</a>
+          <a href="#copilot">Email</a>
+          <a href="#analytics">Recovery</a>
+          <a href="#demo">Demo</a>
+        </div>
+        <a class="nav-cta" href="/demo/">Try demo</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-shell">
+        <div class="hero-copy">
+          <p class="eyebrow">AI collections pipeline</p>
+          <h1>Collect faster, without the chase.</h1>
+          <p class="hero-subtitle">
+            Upload AR aging. Get a prioritized queue. Send approved follow-ups.
+            See what was paid on the next upload.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="/demo/">See it in action</a>
+            <a class="button secondary" href="#paid">Paid access</a>
+          </div>
+          <div class="integration-row" aria-label="Supported workflow">
+            <span>CSV upload</span>
+            <span>Linked email</span>
+            <span>Cash recovered</span>
+          </div>
+        </div>
+
+        <div class="dashboard-card hero-dashboard" aria-label="Collections dashboard preview">
+          <div class="card-header">
+            <div>
+              <p class="muted-label">Today</p>
+              <h2>$81,900 queued</h2>
+            </div>
+            <span class="status-pill">Ready</span>
+          </div>
+
+          <div class="queue-list">
+            <article class="queue-item high">
+              <div>
+                <strong>Acme Supply</strong>
+                <p>$22,400 overdue</p>
+              </div>
+              <span>Email</span>
+            </article>
+            <article class="queue-item">
+              <div>
+                <strong>Beta Logistics</strong>
+                <p>$18,000 overdue</p>
+              </div>
+              <span>Drafted</span>
+            </article>
+            <article class="queue-item call">
+              <div>
+                <strong>Delta Foods</strong>
+                <p>$12,700 overdue</p>
+              </div>
+              <span>Escalate</span>
+            </article>
+          </div>
+
+          <div class="one-click">
+            <button id="sendBatchButton" type="button">Prepare 37 emails</button>
+            <p id="sendBatchStatus" aria-live="polite">$48,200 estimated recovery</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics-bar section-shell" aria-label="Collections metrics">
+        <article>
+          <span>$428K</span>
+          <p>AR surfaced</p>
+        </article>
+        <article>
+          <span>34%</span>
+          <p>Faster collections</p>
+        </article>
+        <article>
+          <span>$96K</span>
+          <p>Expected this week</p>
+        </article>
+        <article>
+          <span>92%</span>
+          <p>Promises tracked</p>
+        </article>
+      </section>
+
+      <section id="pipeline" class="section-shell pipeline-section">
+        <div class="section-heading centered">
+          <p class="eyebrow">The pipeline</p>
+          <h2>Six simple steps.</h2>
+          <p>
+            A calm workflow for the collections work your team already does.
+          </p>
+        </div>
+
+        <div class="pipeline-steps" aria-label="CollectionsAI pipeline stages">
+          <article class="pipeline-step">
+            <span>1</span>
+            <h3>Upload</h3>
+            <p>Drop in AR aging.</p>
+          </article>
+          <article class="pipeline-step">
+            <span>2</span>
+            <h3>Prioritize</h3>
+            <p>See who matters first.</p>
+          </article>
+          <article class="pipeline-step">
+            <span>3</span>
+            <h3>Draft</h3>
+            <p>Include payment links.</p>
+          </article>
+          <article class="pipeline-step active">
+            <span>4</span>
+            <h3>Send</h3>
+            <p>Connect email. You approve send.</p>
+          </article>
+          <article class="pipeline-step">
+            <span>5</span>
+            <h3>Track</h3>
+            <p>Never lose a promise.</p>
+          </article>
+          <article class="pipeline-step">
+            <span>6</span>
+            <h3>Measure</h3>
+            <p>See what was paid.</p>
+          </article>
+        </div>
+
+        <div class="pipeline-demo">
+          <div>
+            <p class="eyebrow">See it work</p>
+            <h3>Upload sample aging. Watch emails appear.</h3>
+            <p>
+            Use sample data, or upload your own AR aging CSV.
+            </p>
+          </div>
+          <div class="pipeline-output">
+            <span>Sample output</span>
+            <strong>Acme Supply - $22,400 overdue</strong>
+            <p>
+              Friendly reminder drafted for ap@acmesupply.com.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="copilot" class="section-shell split-section">
+        <div>
+          <p class="eyebrow">Email-first</p>
+          <h2>Connect email. Drafts appear automatically.</h2>
+          <p>
+            Customers link QBO and email after subscribing. CollectionsAI creates
+            drafts with payment links; the user reviews and sends.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="feature-number">01</span>
+            <h3>Right customer</h3>
+            <p>Ranked by impact.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">02</span>
+            <h3>Right tone</h3>
+            <p>Friendly, firm, or escalated.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">03</span>
+            <h3>Right channel</h3>
+            <p>Gmail or Outlook.</p>
+          </article>
+          <article class="feature-card">
+            <span class="feature-number">04</span>
+            <h3>Right proof</h3>
+            <p>Measure what came in.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section-shell personalization-section">
+        <div class="email-panel">
+          <div class="email-tabs" role="tablist" aria-label="Email personalization examples">
+            <button class="email-tab active" type="button" data-tone="friendly">Friendly</button>
+            <button class="email-tab" type="button" data-tone="late">Late payer</button>
+            <button class="email-tab" type="button" data-tone="executive">Executive</button>
+          </div>
+          <div class="email-preview">
+            <p class="muted-label">AI draft</p>
+            <h3 id="emailSubject">Quick reminder on invoice INV-1042</h3>
+            <p id="emailBody">
+              Hi Jordan, hope you&apos;re doing well. I wanted to send a quick reminder
+              that invoice INV-1042 is now due. You can pay using the secure link below,
+              or reply here if you need anything from our team.
+            </p>
+            <a href="mailto:hello@collectionsai.com">Review and send</a>
+          </div>
+        </div>
+
+        <div>
+          <p class="eyebrow">Tone</p>
+          <h2>Simple messages. Better timing.</h2>
+          <p>
+            Start soft. Get firmer over time. Keep every email clear.
+          </p>
+        </div>
+      </section>
+
+      <section class="section-shell promise-section">
+        <div>
+          <p class="eyebrow">Promises</p>
+          <h2>&quot;Paying Friday&quot; should not disappear.</h2>
+          <p>
+            Track commitments, follow-ups, and missed payments.
+          </p>
+        </div>
+        <div class="promise-card">
+          <div class="message-bubble">Paying Friday. Thanks for the reminder.</div>
+          <ul class="promise-list">
+            <li>
+              <span></span>
+              Promise logged for Friday
+            </li>
+            <li>
+              <span></span>
+              Follow-up scheduled if unpaid
+            </li>
+            <li>
+              <span></span>
+              Missed commitment alert prepared
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="analytics" class="section-shell analytics-section">
+        <div class="section-heading">
+          <p class="eyebrow">Recovery</p>
+          <h2>Upload again. See what changed.</h2>
+        </div>
+        <div class="analytics-grid">
+          <article class="analytics-card large">
+            <div class="card-header">
+              <div>
+                <p class="muted-label">Recovered</p>
+                <h3>$126,500 collected this month</h3>
+              </div>
+              <span class="status-pill green">On pace</span>
+            </div>
+            <div class="recovery-list">
+              <label>
+                <input type="checkbox" checked />
+                <span>Acme Supply - $22,400 recovered</span>
+              </label>
+              <label>
+                <input type="checkbox" checked />
+                <span>Northstar Retail - $41,800 recovered</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>Beta Logistics - $18,000 expected Friday</span>
+              </label>
+              <label>
+                <input type="checkbox" />
+                <span>Delta Foods - $12,700 payment plan pending</span>
+              </label>
+            </div>
+          </article>
+          <article class="analytics-card">
+            <p class="muted-label">Average days to collect</p>
+            <strong>28.4</strong>
+            <span>Down from 43.1</span>
+          </article>
+          <article class="analytics-card">
+            <p class="muted-label">Collection rate</p>
+            <strong>81%</strong>
+            <span>Up 17% this quarter</span>
+          </article>
+          <article class="analytics-card risk">
+            <p class="muted-label">Customers at risk</p>
+            <strong>9</strong>
+            <span>3 need escalation today</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="paid" class="section-shell paid-section">
+        <div>
+          <p class="eyebrow">Paid website access</p>
+          <h2>Visitors can preview it. Customers pay to use it.</h2>
+          <p>
+            The paid version unlocks AR uploads, email linking, generated drafts,
+            promise tracking, and recovery reporting.
+          </p>
+        </div>
+        <div class="paid-card">
+          <span>Paid workspace</span>
+          <strong>Upload aging + link email</strong>
+          <p>Stripe checkout is scaffolded for subscriptions. Add live keys when ready.</p>
+          <a class="button primary" href="/api/billing/checkout">Subscribe to use</a>
+        </div>
+      </section>
+
+      <section id="demo" class="cta-section section-shell">
+        <div>
+          <p class="eyebrow">Start simple</p>
+          <h2>Upload aging. Draft emails. Recover cash.</h2>
+          <p>
+            A clean workflow your team can understand in one screen.
+          </p>
+        </div>
+        <a class="button primary light" href="/demo/">Try demo</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>CollectionsAI</span>
+      <p>AI-powered accounts receivable and collections workflow.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

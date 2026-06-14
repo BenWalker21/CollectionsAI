@@ -1,0 +1,10 @@
+{
+  "name": "collectionsai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing homepage and MVP app shell for CollectionsAI, an AI collections copilot.",
+  "scripts": {
+    "serve": "node server.mjs",
+    "check": "node --check server.mjs && node --check script.js && node --check app/app.js"
+  }
+}
