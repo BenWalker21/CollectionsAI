@@ -17,11 +17,11 @@ export async function POST(request: Request) {
   const parsed = Papa.parse<SheetRow>(text, { skipEmptyLines: false });
   const rows = parsed.data;
 
-  const { mapping } = detectColumns(rows);
+  const { mapping, hasHeader } = detectColumns(rows);
   if (mapping.name == null) {
-    return NextResponse.json({ error: "Could not find a customer name column in this file" }, { status: 400 });
+    return NextResponse.json({ error: "This file appears to be empty" }, { status: 400 });
   }
-  const customerRows = parseCustomerRows(rows, mapping);
+  const customerRows = parseCustomerRows(rows, mapping, hasHeader);
 
   let created = 0;
   let matched = 0;

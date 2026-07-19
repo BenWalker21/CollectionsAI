@@ -27,21 +27,41 @@ function matchColumn(headerLower: string[], synonyms: string[]): number | null {
   return null;
 }
 
-export function detectColumns(rows: SheetRow[]): { header: string[]; mapping: ColumnMapping } {
+function looksLikeEmail(v: unknown): boolean {
+  return /\S+@\S+\.\S+/.test(String(v ?? ""));
+}
+
+export function detectColumns(rows: SheetRow[]): { header: string[]; mapping: ColumnMapping; hasHeader: boolean } {
   const header = (rows[0] || []).map((c) => String(c || "").trim());
   const headerLower = header.map((h) => h.toLowerCase());
+  const nameIdx = matchColumn(headerLower, NAME_SYNONYMS);
+  const emailIdx = matchColumn(headerLower, EMAIL_SYNONYMS);
+
+  if (nameIdx != null || emailIdx != null) {
+    return { header, mapping: { name: nameIdx, email: emailIdx }, hasHeader: true };
+  }
+
+  // No header word recognized — fall back to positional columns (first =
+  // name, second = email) and figure out whether row 0 is itself a data
+  // row or an unrecognized header by checking whether it (or later rows)
+  // has an email-shaped second column.
+  const sample = rows.slice(0, 6).filter((r) => r && r.some((c) => String(c || "").trim()));
+  const row0LooksLikeData = sample.length > 0 && looksLikeEmail(sample[0][1]);
+  const anyRowLooksLikeData = sample.some((r) => looksLikeEmail(r[1]));
+  const hasHeader = !row0LooksLikeData && anyRowLooksLikeData;
+
+  const width = Math.max(0, ...rows.slice(0, 6).map((r) => (r ? r.length : 0)));
   return {
     header,
-    mapping: {
-      name: matchColumn(headerLower, NAME_SYNONYMS),
-      email: matchColumn(headerLower, EMAIL_SYNONYMS),
-    },
+    mapping: { name: width >= 1 ? 0 : null, email: width >= 2 ? 1 : null },
+    hasHeader,
   };
 }
 
-export function parseCustomerRows(rows: SheetRow[], mapping: ColumnMapping): CustomerRow[] {
+export function parseCustomerRows(rows: SheetRow[], mapping: ColumnMapping, hasHeader: boolean): CustomerRow[] {
   const out: CustomerRow[] = [];
-  for (let i = 1; i < rows.length; i++) {
+  const startIdx = hasHeader ? 1 : 0;
+  for (let i = startIdx; i < rows.length; i++) {
     const row = rows[i];
     if (!row || !row.some((c) => String(c || "").trim())) continue;
     const name = cell(row, mapping.name);
