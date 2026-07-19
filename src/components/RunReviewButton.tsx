@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { btnPrimary } from "@/lib/ui";
 
 export function RunReviewButton() {
   const router = useRouter();
@@ -22,14 +23,10 @@ export function RunReviewButton() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <button
-        onClick={run}
-        disabled={busy}
-        className="px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50"
-      >
+      <button onClick={run} disabled={busy} className={btnPrimary}>
         {busy ? "Running…" : "Run AR Review"}
       </button>
-      {summary ? <span className="text-slate-500">{summary}</span> : null}
+      {summary ? <span className="text-navy-700/60">{summary}</span> : null}
     </div>
   );
 }
