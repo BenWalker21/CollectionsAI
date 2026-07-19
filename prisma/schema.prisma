@@ -103,7 +103,8 @@ model Integration {
   status       IntegrationStatus   @default(CONNECTED)
   expiresAt    DateTime?
   // QBO calls this realmId, Salesforce calls it org id — normalized to one field here
-  externalOrgId String?
+  externalOrgId   String?
+  externalOrgName String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
 
@@ -129,6 +130,7 @@ model Customer {
   contacts  Contact[]
   invoices  Invoice[]
 
+  @@unique([companyId, quickbooksId])
   @@index([companyId])
   @@map("customers")
 }
@@ -169,6 +171,7 @@ model Invoice {
   payments   Payment[]
   aiActions  AIAction[]
 
+  @@unique([customerId, quickbooksId])
   @@index([customerId])
   @@index([status])
   @@map("invoices")

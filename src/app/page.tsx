@@ -1,5 +1,6 @@
 import { requireCompany } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { QuickBooksConnect } from "@/components/QuickBooksConnect";
 import { UserButton } from "@clerk/nextjs";
 import type { Invoice, Customer, AIAction } from "@prisma/client";
 
@@ -30,17 +31,53 @@ export default async function DashboardPage() {
     orderBy: { invoice: { priorityScore: "desc" } },
   });
 
+  const qbIntegration = await prisma.integration.findUnique({
+    where: { companyId_provider: { companyId: company.id, provider: "QUICKBOOKS" } },
+  });
+
   return (
     <div className="max-w-5xl mx-auto w-full px-6 py-10">
       <header className="flex items-center justify-between mb-10">
         <h1 className="text-2xl font-semibold text-slate-900">{company.name} — AR Dashboard</h1>
-        <UserButton />
+        <div className="flex items-center gap-4">
+          <QuickBooksConnect
+            connected={qbIntegration?.status === "CONNECTED"}
+            companyName={qbIntegration?.externalOrgName ?? null}
+          />
+          <UserButton />
+        </div>
       </header>
 
       <section className="grid grid-cols-3 gap-4 mb-10">
         <SummaryCard label="Total Outstanding" value={totalOutstanding} />
         <SummaryCard label="Overdue" value={totalOverdue} tone="warning" />
         <SummaryCard label="AI Actions Pending" value={pendingActions.length} isCount />
+      </section>
+
+      <section className="mb-10">
+        <h2 className="text-lg font-medium text-slate-900 mb-4">Open Invoices</h2>
+        <div className="space-y-2">
+          {invoices.length === 0 && (
+            <p className="text-slate-500 text-sm">
+              No open invoices yet — connect QuickBooks and sync to pull them in.
+            </p>
+          )}
+          {invoices.map((inv) => (
+            <div
+              key={inv.id}
+              className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between"
+            >
+              <div>
+                <p className="font-medium text-slate-900">{inv.customer.name}</p>
+                <p className="text-sm text-slate-500">Invoice {inv.invoiceNumber}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium text-slate-900">${Number(inv.balanceRemaining).toLocaleString()}</p>
+                <p className="text-sm text-slate-500">{inv.daysOverdue > 0 ? `${inv.daysOverdue} days overdue` : inv.status}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section>
