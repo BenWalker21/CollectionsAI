@@ -9,14 +9,25 @@ import { prisma } from '@/lib/prisma';
 export async function requireCompany() {
   const { orgId, userId } = await auth();
 
-  if (!orgId || !userId) {
+  if (!userId) {
+    throw new Error('No active session.');
+  }
+
+  // Clerk's session-level "active organization" isn't always set on a fresh
+  // sign-in even when the user already belongs to one (e.g. after signing
+  // out and back in, or a new device/browser) — fall back to the membership
+  // our own webhook already synced. Every user here belongs to exactly one
+  // company, so there's no ambiguity to resolve.
+  const companyId = orgId ?? (await prisma.user.findUnique({ where: { clerkUserId: userId } }))?.companyId ?? null;
+
+  if (!companyId) {
     throw new Error('No active organization/company in session.');
   }
 
-  const company = await prisma.company.findUnique({ where: { id: orgId } });
+  const company = await prisma.company.findUnique({ where: { id: companyId } });
 
   if (!company) {
-    throw new Error(`No Company record found for Clerk org ${orgId}. Has onboarding completed?`);
+    throw new Error(`No Company record found for Clerk org ${companyId}. Has onboarding completed?`);
   }
 
   return { company, userId };
