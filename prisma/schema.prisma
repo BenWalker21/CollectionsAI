@@ -65,6 +65,12 @@ enum ActionStatus {
   REJECTED
 }
 
+enum MatchCandidateStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
 model Company {
   id               String   @id @default(cuid())
   name             String
@@ -72,9 +78,10 @@ model Company {
   stripeCustomerId String?
   createdAt        DateTime @default(now())
 
-  users          User[]
-  integrations   Integration[]
-  customers      Customer[]
+  users            User[]
+  integrations     Integration[]
+  customers        Customer[]
+  matchCandidates  CustomerMatchCandidate[]
 
   @@map("companies")
 }
@@ -126,9 +133,10 @@ model Customer {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  company   Company    @relation(fields: [companyId], references: [id])
-  contacts  Contact[]
-  invoices  Invoice[]
+  company         Company                  @relation(fields: [companyId], references: [id])
+  contacts        Contact[]
+  invoices        Invoice[]
+  matchCandidates CustomerMatchCandidate[]
 
   @@unique([companyId, quickbooksId])
   @@index([companyId])
@@ -228,4 +236,23 @@ model AIAction {
   @@index([invoiceId])
   @@index([status])
   @@map("ai_actions")
+}
+
+// A fuzzy-matched candidate awaiting human confirmation that a CSV-imported
+// customer is (or isn't) the same real-world customer as an existing record.
+model CustomerMatchCandidate {
+  id                String               @id @default(cuid())
+  companyId         String
+  candidateName     String
+  candidateEmail    String?
+  matchedCustomerId String
+  confidence        Float
+  status            MatchCandidateStatus @default(PENDING)
+  createdAt         DateTime             @default(now())
+
+  company         Company  @relation(fields: [companyId], references: [id])
+  matchedCustomer Customer @relation(fields: [matchedCustomerId], references: [id])
+
+  @@index([companyId, status])
+  @@map("customer_match_candidates")
 }

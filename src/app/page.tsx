@@ -1,5 +1,7 @@
 import { requireCompany } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { CsvImport } from "@/components/CsvImport";
+import { MatchReviewQueue } from "@/components/MatchReviewQueue";
 import { QuickBooksConnect } from "@/components/QuickBooksConnect";
 import { UserButton } from "@clerk/nextjs";
 import type { Invoice, Customer, AIAction } from "@prisma/client";
@@ -35,11 +37,18 @@ export default async function DashboardPage() {
     where: { companyId_provider: { companyId: company.id, provider: "QUICKBOOKS" } },
   });
 
+  const pendingMatchCandidates = await prisma.customerMatchCandidate.findMany({
+    where: { companyId: company.id, status: "PENDING" },
+    include: { matchedCustomer: true },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <div className="max-w-5xl mx-auto w-full px-6 py-10">
       <header className="flex items-center justify-between mb-10">
         <h1 className="text-2xl font-semibold text-slate-900">{company.name} — AR Dashboard</h1>
         <div className="flex items-center gap-4">
+          <CsvImport />
           <QuickBooksConnect
             connected={qbIntegration?.status === "CONNECTED"}
             companyName={qbIntegration?.externalOrgName ?? null}
@@ -47,6 +56,18 @@ export default async function DashboardPage() {
           <UserButton />
         </div>
       </header>
+
+      {pendingMatchCandidates.length > 0 ? (
+        <MatchReviewQueue
+          candidates={pendingMatchCandidates.map((c) => ({
+            id: c.id,
+            candidateName: c.candidateName,
+            candidateEmail: c.candidateEmail,
+            confidence: c.confidence,
+            matchedCustomerName: c.matchedCustomer.name,
+          }))}
+        />
+      ) : null}
 
       <section className="grid grid-cols-3 gap-4 mb-10">
         <SummaryCard label="Total Outstanding" value={totalOutstanding} />
