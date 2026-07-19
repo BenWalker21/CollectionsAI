@@ -14,16 +14,27 @@ export interface ReviewCandidate {
 export function MatchReviewQueue({ candidates }: { candidates: ReviewCandidate[] }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function act(id: string, action: "confirm" | "reject") {
     setBusyId(id);
-    await fetch(`/api/customers/match-candidates/${id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
-    setBusyId(null);
-    router.refresh();
+    setError(null);
+    try {
+      const res = await fetch(`/api/customers/match-candidates/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   return (
@@ -32,6 +43,7 @@ export function MatchReviewQueue({ candidates }: { candidates: ReviewCandidate[]
       <p className="text-sm text-slate-500 mb-4">
         These imported customers look similar to existing ones, but not similar enough to link automatically.
       </p>
+      {error ? <p className="text-sm text-red-600 mb-4">{error}</p> : null}
       <div className="space-y-3">
         {candidates.map((c) => (
           <div key={c.id} className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between">
