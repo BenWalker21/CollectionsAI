@@ -1,0 +1,228 @@
+// AI AR Assistant — Phase 1 schema
+// Multi-tenant. Every table below Company carries a company_id for tenant isolation.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  VIEWER
+}
+
+enum IntegrationProvider {
+  QUICKBOOKS
+  SALESFORCE
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  TOKEN_EXPIRED
+}
+
+enum ContactSource {
+  SALESFORCE
+  CSV
+  MANUAL
+}
+
+enum InvoiceStatus {
+  CURRENT
+  APPROACHING_DUE
+  OVERDUE
+  REMINDER_SENT
+  PAYMENT_PROMISED
+  DISPUTED
+  ESCALATED
+  PAID
+  CLOSED
+}
+
+enum CommunicationDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum ActionType {
+  SEND_REMINDER
+  WAIT
+  ESCALATE_TO_HUMAN
+  MARK_DISPUTED
+  NO_ACTION
+}
+
+enum ActionStatus {
+  PENDING_REVIEW
+  APPROVED
+  EDITED
+  REJECTED
+}
+
+model Company {
+  id               String   @id @default(cuid())
+  name             String
+  subscriptionPlan String   @default("starter")
+  stripeCustomerId String?
+  createdAt        DateTime @default(now())
+
+  users          User[]
+  integrations   Integration[]
+  customers      Customer[]
+
+  @@map("companies")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  companyId String
+  clerkUserId String @unique
+  email     String
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id])
+  reviewedActions AIAction[] @relation("ReviewedBy")
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Integration {
+  id           String              @id @default(cuid())
+  companyId    String
+  provider     IntegrationProvider
+  accessToken  String              // store encrypted at the application layer before persisting
+  refreshToken String              // store encrypted at the application layer before persisting
+  status       IntegrationStatus   @default(CONNECTED)
+  expiresAt    DateTime?
+  // QBO calls this realmId, Salesforce calls it org id — normalized to one field here
+  externalOrgId String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, provider])
+  @@map("integrations")
+}
+
+model Customer {
+  id               String   @id @default(cuid())
+  companyId        String
+  name             String
+  quickbooksId     String?
+  salesforceId     String?
+  csvSourceId      String?
+  matchConfidence  Float?   // null = not yet run through matching service; 0-100 otherwise
+  riskScore        Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company   Company    @relation(fields: [companyId], references: [id])
+  contacts  Contact[]
+  invoices  Invoice[]
+
+  @@index([companyId])
+  @@map("customers")
+}
+
+model Contact {
+  id               String        @id @default(cuid())
+  customerId       String
+  name             String
+  email            String
+  role             String?
+  source           ContactSource
+  confidenceScore  Float?
+  isBillingContact Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  communications Communication[]
+
+  @@index([customerId])
+  @@map("contacts")
+}
+
+model Invoice {
+  id               String        @id @default(cuid())
+  customerId       String
+  quickbooksId     String?
+  invoiceNumber    String
+  amount           Decimal
+  balanceRemaining Decimal
+  dueDate          DateTime
+  status           InvoiceStatus @default(CURRENT)
+  daysOverdue      Int           @default(0)
+  priorityScore    Float         @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  payments   Payment[]
+  aiActions  AIAction[]
+
+  @@index([customerId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  amount      Decimal
+  paymentDate DateTime
+  createdAt   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+model Communication {
+  id        String                  @id @default(cuid())
+  customerId String
+  contactId  String
+  aiActionId String?                 // links a sent email back to the recommendation that produced it
+  direction  CommunicationDirection
+  emailBody  String
+  sentDate   DateTime
+  response   String?
+  createdAt  DateTime                @default(now())
+
+  contact  Contact   @relation(fields: [contactId], references: [id])
+  aiAction AIAction? @relation(fields: [aiActionId], references: [id])
+
+  @@index([customerId])
+  @@index([contactId])
+  @@map("communications")
+}
+
+// The audit backbone: every AI recommendation, its structured reasoning, and human disposition.
+model AIAction {
+  id                String       @id @default(cuid())
+  invoiceId         String
+  actionType        ActionType
+  recommendation    String       // human-readable recommendation text, e.g. "Send friendly reminder"
+  structuredReasoning Json       // e.g. { daysOverdue, amount, paymentHistoryPattern, customerValue, recommendedTone }
+  status            ActionStatus @default(PENDING_REVIEW)
+  reviewedById      String?
+  reviewedAt        DateTime?
+  createdAt         DateTime     @default(now())
+
+  invoice        Invoice          @relation(fields: [invoiceId], references: [id])
+  reviewedBy     User?            @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  communications Communication[]
+
+  @@index([invoiceId])
+  @@index([status])
+  @@map("ai_actions")
+}

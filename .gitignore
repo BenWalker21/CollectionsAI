@@ -1,0 +1,13 @@
+node_modules
+.next
+out
+.env
+.env*.local
+.DS_Store
+*.pem
+npm-debug.log*
+tsconfig.tsbuildinfo
+/prisma/generated
+
+# clerk configuration (can include secrets)
+/.clerk/
