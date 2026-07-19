@@ -41,18 +41,18 @@ function EditableContact({ contact }: { contact: ContactRow }) {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-slate-700 min-w-0">{contact.name}</span>
-      <span className="text-xs text-slate-400 uppercase shrink-0">{contact.source}</span>
+      <span className="text-navy-800 min-w-0">{contact.name}</span>
+      <span className="text-xs text-navy-700/40 uppercase shrink-0">{contact.source}</span>
       {editing ? (
         <>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-slate-300 rounded px-2 py-0.5 text-sm flex-1 min-w-0"
+            className="border border-navy-900/20 rounded px-2 py-0.5 text-sm flex-1 min-w-0"
             autoFocus
           />
-          <button onClick={save} disabled={busy} className="text-slate-900 font-medium disabled:opacity-50">
+          <button onClick={save} disabled={busy} className="text-navy-950 font-medium disabled:opacity-50">
             {busy ? "Saving…" : "Save"}
           </button>
           <button
@@ -61,17 +61,17 @@ function EditableContact({ contact }: { contact: ContactRow }) {
               setEmail(contact.email);
               setError(null);
             }}
-            className="text-slate-400"
+            className="text-navy-700/40"
           >
             Cancel
           </button>
         </>
       ) : (
-        <button onClick={() => setEditing(true)} className="text-slate-500 hover:text-slate-900 underline decoration-dotted">
+        <button onClick={() => setEditing(true)} className="text-navy-700/60 hover:text-navy-950 underline decoration-dotted">
           {contact.email || "(no email)"}
         </button>
       )}
-      {error ? <span className="text-red-600 text-xs">{error}</span> : null}
+      {error ? <span className="text-rust-600 text-xs">{error}</span> : null}
     </div>
   );
 }
@@ -111,7 +111,7 @@ export function CustomerContacts({ customerId, contacts }: { customerId: string;
 
   return (
     <div className="space-y-1.5 mt-2">
-      {contacts.length === 0 && !adding ? <p className="text-sm text-slate-400">No contacts on file.</p> : null}
+      {contacts.length === 0 && !adding ? <p className="text-sm text-navy-700/40">No contacts on file.</p> : null}
       {contacts.map((c) => (
         <EditableContact key={c.id} contact={c} />
       ))}
@@ -121,28 +121,28 @@ export function CustomerContacts({ customerId, contacts }: { customerId: string;
             placeholder="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border border-slate-300 rounded px-2 py-0.5 text-sm w-32"
+            className="border border-navy-900/20 rounded px-2 py-0.5 text-sm w-32"
           />
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-slate-300 rounded px-2 py-0.5 text-sm flex-1 min-w-0"
+            className="border border-navy-900/20 rounded px-2 py-0.5 text-sm flex-1 min-w-0"
           />
-          <button onClick={addContact} disabled={busy} className="text-slate-900 font-medium disabled:opacity-50">
+          <button onClick={addContact} disabled={busy} className="text-navy-950 font-medium disabled:opacity-50">
             {busy ? "Adding…" : "Add"}
           </button>
-          <button onClick={() => setAdding(false)} className="text-slate-400">
+          <button onClick={() => setAdding(false)} className="text-navy-700/40">
             Cancel
           </button>
         </div>
       ) : (
-        <button onClick={() => setAdding(true)} className="text-sm text-slate-500 hover:text-slate-900 mt-1">
+        <button onClick={() => setAdding(true)} className="text-sm text-navy-700/60 hover:text-navy-950 mt-1">
           + Add contact
         </button>
       )}
-      {error ? <p className="text-red-600 text-xs">{error}</p> : null}
+      {error ? <p className="text-rust-600 text-xs">{error}</p> : null}
     </div>
   );
 }

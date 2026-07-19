@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { btnDanger, btnPrimary } from "@/lib/ui";
 
 export function ActionButtons({ actionId }: { actionId: string }) {
   const router = useRouter();
@@ -20,18 +21,10 @@ export function ActionButtons({ actionId }: { actionId: string }) {
 
   return (
     <div className="flex gap-2 shrink-0 ml-4">
-      <button
-        onClick={() => act("approve")}
-        disabled={busy !== null}
-        className="px-3 py-1.5 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-700 disabled:opacity-50"
-      >
+      <button onClick={() => act("approve")} disabled={busy !== null} className={btnPrimary}>
         {busy === "approve" ? "Approving…" : "Approve"}
       </button>
-      <button
-        onClick={() => act("reject")}
-        disabled={busy !== null}
-        className="px-3 py-1.5 text-sm rounded-md border border-slate-300 hover:bg-slate-50 text-red-600 disabled:opacity-50"
-      >
+      <button onClick={() => act("reject")} disabled={busy !== null} className={btnDanger}>
         {busy === "reject" ? "Rejecting…" : "Reject"}
       </button>
     </div>

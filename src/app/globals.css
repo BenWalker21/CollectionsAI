@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f2ead9;
+  --foreground: #0f1f38;
+
+  --navy-950: #0a1628;
+  --navy-900: #0f1f38;
+  --navy-800: #17304f;
+  --navy-700: #203f66;
+  --navy-600: #2f5480;
+  --navy-500: #4a6f9b;
+
+  --beige-page: #f2ead9;
+  --beige-50: #fbf8f2;
+  --beige-100: #f2e9d8;
+  --beige-200: #e9dcc0;
+  --beige-300: #dccba3;
+
+  --brass-100: #f1e4c9;
+  --brass-500: #ab8552;
+  --brass-600: #8f6c3f;
+
+  --rust-50: #fbeee7;
+  --rust-600: #b1502e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  --color-navy-950: var(--navy-950);
+  --color-navy-900: var(--navy-900);
+  --color-navy-800: var(--navy-800);
+  --color-navy-700: var(--navy-700);
+  --color-navy-600: var(--navy-600);
+  --color-navy-500: var(--navy-500);
+
+  --color-beige-page: var(--beige-page);
+  --color-beige-50: var(--beige-50);
+  --color-beige-100: var(--beige-100);
+  --color-beige-200: var(--beige-200);
+  --color-beige-300: var(--beige-300);
+
+  --color-brass-100: var(--brass-100);
+  --color-brass-500: var(--brass-500);
+  --color-brass-600: var(--brass-600);
+
+  --color-rust-50: var(--rust-50);
+  --color-rust-600: var(--rust-600);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }

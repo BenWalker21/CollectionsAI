@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { btnSecondary } from "@/lib/ui";
 
 export function CsvImport() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export function CsvImport() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <label className="px-3 py-1.5 rounded-md border border-slate-300 hover:bg-slate-50 cursor-pointer">
+      <label className={`${btnSecondary} cursor-pointer`}>
         {busy ? "Importing…" : "Import customers (CSV)"}
         <input
           type="file"
@@ -41,8 +42,8 @@ export function CsvImport() {
           onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
         />
       </label>
-      {summary ? <span className="text-slate-500">{summary}</span> : null}
-      {error ? <span className="text-red-600">{error}</span> : null}
+      {summary ? <span className="text-navy-700/60">{summary}</span> : null}
+      {error ? <span className="text-rust-600">{error}</span> : null}
     </div>
   );
 }

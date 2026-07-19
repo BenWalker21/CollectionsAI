@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { requireCompany } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { ActionButtons } from "@/components/ActionButtons";
+import { AppHeader } from "@/components/AppHeader";
 import { CsvImport } from "@/components/CsvImport";
 import { MatchReviewQueue } from "@/components/MatchReviewQueue";
 import { QuickBooksConnect } from "@/components/QuickBooksConnect";
 import { RunReviewButton } from "@/components/RunReviewButton";
-import { UserButton } from "@clerk/nextjs";
+import { card } from "@/lib/ui";
 import type { Invoice, Customer, AIAction } from "@prisma/client";
 
 type InvoiceWithCustomer = Invoice & { customer: Customer };
@@ -47,82 +47,83 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="max-w-5xl mx-auto w-full px-6 py-10">
-      <header className="flex items-center justify-between mb-10">
-        <h1 className="text-2xl font-semibold text-slate-900">{company.name} — AR Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <Link href="/customers" className="text-sm text-slate-500 hover:text-slate-900 underline">
-            Customers
-          </Link>
-          <RunReviewButton />
-          <CsvImport />
-          <QuickBooksConnect
-            connected={qbIntegration?.status === "CONNECTED"}
-            companyName={qbIntegration?.externalOrgName ?? null}
+    <>
+      <AppHeader active="dashboard" />
+      <div className="max-w-6xl mx-auto w-full px-6 py-10">
+        <div className="flex items-start justify-between gap-6 flex-wrap mb-10">
+          <div>
+            <h1 className="font-serif text-3xl text-navy-950">{company.name}</h1>
+            <p className="text-sm text-navy-700/60 mt-1">Accounts receivable overview</p>
+          </div>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <RunReviewButton />
+            <CsvImport />
+            <QuickBooksConnect
+              connected={qbIntegration?.status === "CONNECTED"}
+              companyName={qbIntegration?.externalOrgName ?? null}
+            />
+          </div>
+        </div>
+
+        {pendingMatchCandidates.length > 0 ? (
+          <MatchReviewQueue
+            candidates={pendingMatchCandidates.map((c) => ({
+              id: c.id,
+              candidateName: c.candidateName,
+              candidateEmail: c.candidateEmail,
+              confidence: c.confidence,
+              matchedCustomerName: c.matchedCustomer.name,
+            }))}
           />
-          <UserButton />
-        </div>
-      </header>
+        ) : null}
 
-      {pendingMatchCandidates.length > 0 ? (
-        <MatchReviewQueue
-          candidates={pendingMatchCandidates.map((c) => ({
-            id: c.id,
-            candidateName: c.candidateName,
-            candidateEmail: c.candidateEmail,
-            confidence: c.confidence,
-            matchedCustomerName: c.matchedCustomer.name,
-          }))}
-        />
-      ) : null}
+        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+          <SummaryCard label="Total Outstanding" value={totalOutstanding} />
+          <SummaryCard label="Overdue" value={totalOverdue} tone="warning" />
+          <SummaryCard label="AI Actions Pending" value={pendingActions.length} isCount />
+        </section>
 
-      <section className="grid grid-cols-3 gap-4 mb-10">
-        <SummaryCard label="Total Outstanding" value={totalOutstanding} />
-        <SummaryCard label="Overdue" value={totalOverdue} tone="warning" />
-        <SummaryCard label="AI Actions Pending" value={pendingActions.length} isCount />
-      </section>
-
-      <section className="mb-10">
-        <h2 className="text-lg font-medium text-slate-900 mb-4">Open Invoices</h2>
-        <div className="space-y-2">
-          {invoices.length === 0 && (
-            <p className="text-slate-500 text-sm">
-              No open invoices yet — connect QuickBooks and sync to pull them in.
-            </p>
-          )}
-          {invoices.map((inv) => (
-            <div
-              key={inv.id}
-              className="bg-white rounded-lg border border-slate-200 p-4 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-medium text-slate-900">{inv.customer.name}</p>
-                <p className="text-sm text-slate-500">Invoice {inv.invoiceNumber}</p>
+        <section className="mb-10">
+          <h2 className="font-serif text-xl text-navy-950 mb-4">Open Invoices</h2>
+          <div className="space-y-2.5">
+            {invoices.length === 0 && (
+              <p className="text-navy-700/60 text-sm">
+                No open invoices yet — connect QuickBooks and sync to pull them in.
+              </p>
+            )}
+            {invoices.map((inv) => (
+              <div key={inv.id} className={`${card} p-4 flex items-center justify-between`}>
+                <div>
+                  <p className="font-medium text-navy-950">{inv.customer.name}</p>
+                  <p className="text-sm text-navy-700/60">Invoice {inv.invoiceNumber}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-navy-950">${Number(inv.balanceRemaining).toLocaleString()}</p>
+                  <p className="text-sm text-navy-700/60">
+                    {inv.daysOverdue > 0 ? `${inv.daysOverdue} days overdue` : inv.status}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="font-medium text-slate-900">${Number(inv.balanceRemaining).toLocaleString()}</p>
-                <p className="text-sm text-slate-500">{inv.daysOverdue > 0 ? `${inv.daysOverdue} days overdue` : inv.status}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
 
-      <section>
-        <h2 className="text-lg font-medium text-slate-900 mb-4">Recommended Actions</h2>
-        <div className="space-y-3">
-          {pendingActions.length === 0 && (
-            <p className="text-slate-500 text-sm">
-              No pending recommendations. Click &ldquo;Run AR Review&rdquo; above to check your
-              open invoices.
-            </p>
-          )}
-          {pendingActions.map((action) => (
-            <ActionCard key={action.id} action={action} />
-          ))}
-        </div>
-      </section>
-    </div>
+        <section>
+          <h2 className="font-serif text-xl text-navy-950 mb-4">Recommended Actions</h2>
+          <div className="space-y-3">
+            {pendingActions.length === 0 && (
+              <p className="text-navy-700/60 text-sm">
+                No pending recommendations. Click &ldquo;Run AR Review&rdquo; above to check your
+                open invoices.
+              </p>
+            )}
+            {pendingActions.map((action) => (
+              <ActionCard key={action.id} action={action} />
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
   );
 }
 
@@ -138,13 +139,9 @@ function SummaryCard({
   isCount?: boolean;
 }) {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-5">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p
-        className={`text-2xl font-semibold mt-1 ${
-          tone === "warning" ? "text-amber-600" : "text-slate-900"
-        }`}
-      >
+    <div className={`${card} p-5`}>
+      <p className="text-sm text-navy-700/60">{label}</p>
+      <p className={`text-2xl font-serif mt-1 ${tone === "warning" ? "text-rust-600" : "text-navy-950"}`}>
         {isCount ? value : `$${value.toLocaleString()}`}
       </p>
     </div>
@@ -155,16 +152,16 @@ function ActionCard({ action }: { action: ActionWithInvoice }) {
   const reasoning = action.structuredReasoning as Record<string, unknown>;
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-5 flex items-start justify-between">
+    <div className={`${card} p-5 flex items-start justify-between`}>
       <div>
-        <p className="font-medium text-slate-900">{action.invoice.customer.name}</p>
-        <p className="text-sm text-slate-500">
+        <p className="font-medium text-navy-950">{action.invoice.customer.name}</p>
+        <p className="text-sm text-navy-700/60">
           ${Number(action.invoice.balanceRemaining).toLocaleString()} overdue
         </p>
-        <p className="text-sm text-slate-700 mt-2">
+        <p className="text-sm text-navy-800 mt-2">
           <span className="font-medium">Recommended:</span> {action.recommendation}
         </p>
-        <ul className="text-xs text-slate-500 mt-1 list-disc list-inside">
+        <ul className="text-xs text-navy-700/60 mt-1 list-disc list-inside">
           {Object.entries(reasoning || {}).map(([key, val]) => (
             <li key={key}>
               {key}: {String(val)}
