@@ -1,8 +1,10 @@
 import { requireCompany } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { ActionButtons } from "@/components/ActionButtons";
 import { CsvImport } from "@/components/CsvImport";
 import { MatchReviewQueue } from "@/components/MatchReviewQueue";
 import { QuickBooksConnect } from "@/components/QuickBooksConnect";
+import { RunReviewButton } from "@/components/RunReviewButton";
 import { UserButton } from "@clerk/nextjs";
 import type { Invoice, Customer, AIAction } from "@prisma/client";
 
@@ -48,6 +50,7 @@ export default async function DashboardPage() {
       <header className="flex items-center justify-between mb-10">
         <h1 className="text-2xl font-semibold text-slate-900">{company.name} — AR Dashboard</h1>
         <div className="flex items-center gap-4">
+          <RunReviewButton />
           <CsvImport />
           <QuickBooksConnect
             connected={qbIntegration?.status === "CONNECTED"}
@@ -106,8 +109,8 @@ export default async function DashboardPage() {
         <div className="space-y-3">
           {pendingActions.length === 0 && (
             <p className="text-slate-500 text-sm">
-              No pending recommendations. The AR Review Agent runs daily and will populate this
-              list once it has processed synced invoices.
+              No pending recommendations. Click &ldquo;Run AR Review&rdquo; above to check your
+              open invoices.
             </p>
           )}
           {pendingActions.map((action) => (
@@ -165,17 +168,7 @@ function ActionCard({ action }: { action: ActionWithInvoice }) {
           ))}
         </ul>
       </div>
-      <div className="flex gap-2 shrink-0 ml-4">
-        <button className="px-3 py-1.5 text-sm rounded-md bg-slate-900 text-white hover:bg-slate-700">
-          Approve
-        </button>
-        <button className="px-3 py-1.5 text-sm rounded-md border border-slate-300 hover:bg-slate-50">
-          Edit
-        </button>
-        <button className="px-3 py-1.5 text-sm rounded-md border border-slate-300 hover:bg-slate-50 text-red-600">
-          Reject
-        </button>
-      </div>
+      <ActionButtons actionId={action.id} />
     </div>
   );
 }
