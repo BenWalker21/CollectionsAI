@@ -21,7 +21,7 @@ export async function POST(request: Request) {
   if (mapping.name == null) {
     return NextResponse.json({ error: "This file appears to be empty" }, { status: 400 });
   }
-  const customerRows = parseCustomerRows(rows, mapping, hasHeader);
+  const { rows: customerRows, skippedArtifacts } = parseCustomerRows(rows, mapping, hasHeader);
 
   let created = 0;
   let matched = 0;
@@ -34,5 +34,5 @@ export async function POST(request: Request) {
     else queuedForReview++;
   }
 
-  return NextResponse.json({ created, matched, queuedForReview, total: customerRows.length });
+  return NextResponse.json({ created, matched, queuedForReview, skippedArtifacts, total: customerRows.length });
 }

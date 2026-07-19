@@ -19,7 +19,8 @@ export function CsvImport() {
       const res = await fetch("/api/customers/import", { method: "POST", body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Import failed");
-      setSummary(`${data.created} new, ${data.matched} matched, ${data.queuedForReview} need review`);
+      const skippedNote = data.skippedArtifacts > 0 ? `, ${data.skippedArtifacts} skipped (looked like report text, not customers)` : "";
+      setSummary(`${data.created} new, ${data.matched} matched, ${data.queuedForReview} need review${skippedNote}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");

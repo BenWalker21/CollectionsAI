@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireCompany } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { ActionButtons } from "@/components/ActionButtons";
@@ -50,6 +51,9 @@ export default async function DashboardPage() {
       <header className="flex items-center justify-between mb-10">
         <h1 className="text-2xl font-semibold text-slate-900">{company.name} — AR Dashboard</h1>
         <div className="flex items-center gap-4">
+          <Link href="/customers" className="text-sm text-slate-500 hover:text-slate-900 underline">
+            Customers
+          </Link>
           <RunReviewButton />
           <CsvImport />
           <QuickBooksConnect

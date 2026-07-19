@@ -31,6 +31,24 @@ function looksLikeEmail(v: unknown): boolean {
   return /\S+@\S+\.\S+/.test(String(v ?? ""));
 }
 
+// Financial report exports (AR aging reports, etc.) have title/date/subtotal
+// rows mixed in with real customer rows — this importer is for a plain
+// customer list, so those artifacts would otherwise get created as garbage
+// "customers" (title text, "Total for X", aging-bucket labels).
+const REPORT_ARTIFACT_PATTERNS = [
+  /report$/i,
+  /^as of\b/i,
+  /^total\b/i,
+  /days?\s+past\s+due$/i,
+  /^current$/i,
+  /^(sunday|monday|tuesday|wednesday|thursday|friday|saturday),/i,
+];
+
+export function looksLikeReportArtifact(name: string): boolean {
+  const trimmed = name.trim();
+  return REPORT_ARTIFACT_PATTERNS.some((p) => p.test(trimmed));
+}
+
 export function detectColumns(rows: SheetRow[]): { header: string[]; mapping: ColumnMapping; hasHeader: boolean } {
   const header = (rows[0] || []).map((c) => String(c || "").trim());
   const headerLower = header.map((h) => h.toLowerCase());
@@ -58,18 +76,28 @@ export function detectColumns(rows: SheetRow[]): { header: string[]; mapping: Co
   };
 }
 
-export function parseCustomerRows(rows: SheetRow[], mapping: ColumnMapping, hasHeader: boolean): CustomerRow[] {
+export interface ParsedCustomerRows {
+  rows: CustomerRow[];
+  skippedArtifacts: number;
+}
+
+export function parseCustomerRows(rows: SheetRow[], mapping: ColumnMapping, hasHeader: boolean): ParsedCustomerRows {
   const out: CustomerRow[] = [];
+  let skippedArtifacts = 0;
   const startIdx = hasHeader ? 1 : 0;
   for (let i = startIdx; i < rows.length; i++) {
     const row = rows[i];
     if (!row || !row.some((c) => String(c || "").trim())) continue;
     const name = cell(row, mapping.name);
     if (!name) continue;
+    if (looksLikeReportArtifact(name)) {
+      skippedArtifacts++;
+      continue;
+    }
     const email = cell(row, mapping.email);
     out.push({ name, email: email || undefined });
   }
-  return out;
+  return { rows: out, skippedArtifacts };
 }
 
 export function fileToRows(file: File): Promise<SheetRow[]> {
